@@ -1,0 +1,303 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Register Pension</title>
+
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <link href="./css/style.css" rel="stylesheet" />
+  </head>
+
+  <body>
+    <div id="toastArea" class="toast-area"></div>
+
+    <div class="d-flex nav-shell">
+      <!-- ✅ Dynamic Navbar Mount -->
+      <div id="bpNavbar" class="d-none d-lg-block"></div>
+
+      <!-- Main -->
+      <div class="flex-grow-1">
+        <div class="topbar">
+          <div
+            class="container py-3 d-flex justify-content-between align-items-center"
+          >
+            <div>
+              <div class="small text-secondary">Step 1 of 2</div>
+              <div class="fw-bold">Pensioner Registration</div>
+            </div>
+
+            <div class="d-flex align-items-center gap-2">
+              <span class="badge-soft"
+                ><span class="dot"></span> Pending Setup</span
+              >
+            </div>
+          </div>
+        </div>
+
+        <div class="container py-4">
+          <div class="soft-card p-4 p-md-5">
+            <div class="row g-4">
+              <!-- Left -->
+              <div class="col-lg-6">
+                <h3 class="fw-bold">Apply for Pension</h3>
+                <p class="text-secondary small">
+                  Choose your program (GPS / PRSS), fill details, and submit
+                  registration.
+                </p>
+
+                <!-- ✅ Program selection -->
+                <div class="mt-3">
+                  <label class="small fw-semibold mb-2">Pension Program</label>
+                  <select id="program" class="form-select input-soft">
+                    <option value="1" selected>
+                      PRSS (Private Retirement Savings)
+                    </option>
+                    <option value="0">GPS (Government Pension Scheme)</option>
+                  </select>
+                  <div class="small text-secondary mt-1">
+                    PRSS = private monthly contribution. GPS = govt pension
+                    based on service record.
+                  </div>
+                </div>
+
+                <!-- ✅ PRSS Fields -->
+                <div id="prssFields">
+                  <div class="mt-3">
+                    <label class="small fw-semibold mb-2"
+                      >Pension Scheme (PRSS)</label
+                    >
+                    <select id="scheme" class="form-select input-soft">
+                      <option value="0">DPS</option>
+                      <option value="1">Retirement Fund</option>
+                      <option value="2">Provident Fund</option>
+                      <option value="3">Insurance Pension</option>
+                    </select>
+                  </div>
+                </div>
+
+                <!-- ✅ GPS Fields -->
+                <div id="gpsFields" style="display: none">
+                  <div class="mt-3">
+                    <h5 class="fw-bold mb-2">GPS Information</h5>
+                    <p class="text-secondary small mb-3">
+                      Provide your government service information. Admin will
+                      verify this before approval.
+                    </p>
+
+                    <div class="mt-2">
+                      <label class="small fw-semibold mb-2"
+                        >Basic Salary (BDT)</label
+                      >
+                      <input
+                        id="basicSalaryBDT"
+                        type="number"
+                        min="1"
+                        class="form-control input-soft"
+                        placeholder="e.g. 25000"
+                        inputmode="numeric"
+                      />
+                    </div>
+
+                    <div class="mt-3">
+                      <label class="small fw-semibold mb-2"
+                        >Service Years</label
+                      >
+                      <input
+                        id="serviceYears"
+                        type="number"
+                        min="1"
+                        class="form-control input-soft"
+                        placeholder="e.g. 25"
+                        inputmode="numeric"
+                      />
+                      <div class="small text-secondary mt-1">
+                        Minimum 10 years required (Bangladesh rule simulation).
+                      </div>
+                    </div>
+
+                    <div class="mt-3">
+                      <label class="small fw-semibold mb-2">Employee ID</label>
+                      <input
+                        id="employeeId"
+                        class="form-control input-soft"
+                        placeholder="e.g. GOB-EMP-103948"
+                        autocomplete="off"
+                      />
+                      <div class="small text-secondary mt-1">
+                        Example: GOB-EMP-103948 / MOE-2023-004512
+                      </div>
+                    </div>
+
+                    <div class="mt-3">
+                      <label class="small fw-semibold mb-2">Designation</label>
+                      <input
+                        id="designation"
+                        class="form-control input-soft"
+                        placeholder="e.g. Senior Officer"
+                        autocomplete="off"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Common -->
+                <div class="mt-3">
+                  <label class="small fw-semibold mb-2">Date of Birth</label>
+
+                  <div class="input-group">
+                    <input
+                      id="dob"
+                      type="text"
+                      class="form-control input-soft"
+                      placeholder="YYYY-MM-DD or DD/MM/YYYY"
+                      autocomplete="off"
+                    />
+
+                    <button
+                      id="btnDobPicker"
+                      class="btn btn-outline-soft"
+                      type="button"
+                      title="Pick date"
+                    >
+                      📅
+                    </button>
+                  </div>
+
+                  <input id="dobPicker" type="date" class="d-none" />
+
+                  <div class="small text-secondary mt-1">
+                    Example: 1960-01-01 / 01-01-1960
+                  </div>
+                </div>
+
+                <!-- ✅ Nominee Info -->
+                <div class="mt-4">
+                  <h5 class="fw-bold mb-2">Nominee Information</h5>
+                  <p class="text-secondary small mb-3">
+                    This nominee can claim pension benefits if the pensioner
+                    dies.
+                  </p>
+
+                  <div class="mt-2">
+                    <label class="small fw-semibold mb-2"
+                      >Nominee Wallet Address</label
+                    >
+                    <input
+                      id="nomineeWallet"
+                      class="form-control input-soft"
+                      placeholder="0x..."
+                      autocomplete="off"
+                    />
+                    <div class="small text-secondary mt-1">
+                      Must be a valid Ethereum address.
+                    </div>
+                  </div>
+
+                  <div class="mt-3">
+                    <label class="small fw-semibold mb-2">Nominee Name</label>
+                    <input
+                      id="nomineeName"
+                      class="form-control input-soft"
+                      placeholder="e.g. Rahim Ahmed"
+                      autocomplete="off"
+                    />
+                  </div>
+
+                  <div class="mt-3">
+                    <label class="small fw-semibold mb-2">Relation</label>
+                    <input
+                      id="nomineeRelation"
+                      class="form-control input-soft"
+                      placeholder="e.g. Wife / Son / Daughter"
+                      autocomplete="off"
+                    />
+                  </div>
+                </div>
+
+                <button
+                  id="btnRegister"
+                  class="btn btn-primary-soft w-100 mt-4"
+                >
+                  Submit Registration
+                </button>
+
+                <div class="mt-3 small text-secondary">
+                  Prototype exchange rate: <b>1 ETH ≈ 300,000 BDT</b>
+                </div>
+              </div>
+
+              <!-- Right -->
+              <div class="col-lg-6">
+                <!-- ✅ PRSS Plan Section -->
+                <div id="planSection">
+                  <h5 class="fw-bold">Monthly Contribution Plans (PRSS)</h5>
+                  <p class="text-secondary small">Choose one tier.</p>
+
+                  <!-- ✅ Dynamic scheme title -->
+                  <div
+                    id="schemeTitle"
+                    class="fw-semibold text-primary mb-2"
+                  ></div>
+
+                  <!-- ✅ Plans will be injected here -->
+                  <div id="plans" class="d-grid gap-3"></div>
+
+                  <div
+                    class="mt-3 p-3 rounded-4"
+                    style="background: #f1f5f9; border: 1px solid #e2e8f0"
+                  >
+                    <div class="small text-secondary">Selected Plan</div>
+                    <div id="selectedPlanText" class="fw-bold mt-1">
+                      Basic Plan
+                    </div>
+                    <div
+                      id="selectedPlanMeta"
+                      class="small text-secondary mt-1"
+                    ></div>
+                  </div>
+                </div>
+
+                <!-- ✅ GPS Info card -->
+                <div
+                  id="gpsInfoCard"
+                  class="mt-2 p-4 rounded-4"
+                  style="
+                    background: #f8fafc;
+                    border: 1px solid #e2e8f0;
+                    display: none;
+                  "
+                >
+                  <h5 class="fw-bold mb-2">GPS Note</h5>
+                  <p class="text-secondary small mb-0">
+                    GPS pensioners do not choose monthly contribution plans.
+                    Your pension will be calculated based on verified service
+                    record and basic salary.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-3 small text-secondary text-center">
+            After registration you will upload documents for admin verification.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/ethers@6.13.4/dist/ethers.umd.min.js"></script>
+
+    <!-- ✅ Navbar Loader -->
+    <script type="module">
+      import { loadNavbar } from "./js/navbar.js";
+      loadNavbar();
+    </script>
+
+    <!-- Existing page logic -->
+    <script type="module" src="./js/app-register.js"></script>
+  </body>
+</html>

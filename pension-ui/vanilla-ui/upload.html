@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Upload Documents</title>
+
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <link href="./css/style.css" rel="stylesheet" />
+  </head>
+
+  <body>
+    <div id="toastArea" class="toast-area"></div>
+
+    <div class="d-flex nav-shell">
+      <!-- ✅ Dynamic Navbar Mount -->
+      <div id="bpNavbar" class="d-none d-lg-block"></div>
+
+      <!-- Main -->
+      <div class="flex-grow-1">
+        <div class="topbar">
+          <div
+            class="container py-3 d-flex justify-content-between align-items-center"
+          >
+            <div>
+              <div class="small text-secondary">Step 2 of 2</div>
+              <div class="fw-bold">Upload Required Documents</div>
+            </div>
+
+            <div class="d-flex align-items-center gap-2">
+              <span class="badge-soft">
+                <span class="dot"></span> Upload & Submit
+              </span>
+
+              <a class="btn btn-outline-soft" href="./register.html">⬅ Back</a>
+            </div>
+          </div>
+        </div>
+
+        <div class="container py-4">
+          <div class="soft-card p-4 p-md-5">
+            <div class="row g-3 align-items-center">
+              <div class="col-md-8">
+                <div class="fw-bold">Guidelines</div>
+                <div class="text-secondary small mt-1">
+                  Upload clear PDF/JPG/PNG (max 10MB). Files will be stored on
+                  IPFS (Pinata) and linked on-chain.
+                </div>
+              </div>
+
+              <div class="col-md-4">
+                <div
+                  class="p-3 rounded-4"
+                  style="background: #f1f5f9; border: 1px solid #e2e8f0"
+                >
+                  <div class="small text-secondary">Progress</div>
+                  <div class="fw-bold" id="progressText">0/0 ready</div>
+                  <div
+                    class="progress mt-2"
+                    style="height: 10px; border-radius: 999px"
+                  >
+                    <div
+                      id="progressBar"
+                      class="progress-bar"
+                      style="width: 0%"
+                    ></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="row g-3 mt-3" id="docsGrid"></div>
+
+            <div class="d-flex flex-column flex-md-row gap-2 mt-4">
+              <button id="btnSubmit" class="btn btn-primary-soft flex-grow-1">
+                Submit Documents
+              </button>
+              <button id="btnClear" class="btn btn-outline-soft">
+                Clear All
+              </button>
+            </div>
+          </div>
+
+          <div class="small text-secondary text-center mt-3">
+            After submission, admin will review your documents and approve your
+            pension.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/ethers@6.13.4/dist/ethers.umd.min.js"></script>
+
+    <!-- ✅ Navbar Loader -->
+    <script type="module">
+      import { loadNavbar } from "./js/navbar.js";
+      loadNavbar();
+    </script>
+
+    <script type="module" src="./js/app-upload.js"></script>
+  </body>
+</html>

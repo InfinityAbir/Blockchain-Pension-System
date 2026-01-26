@@ -1,0 +1,39 @@
+{
+  "_format": "hh3-sol-build-info-1",
+  "id": "solc-0_8_28-dd7cd076e4bba97642f697a30410c9f13bc590b9",
+  "solcVersion": "0.8.28",
+  "solcLongVersion": "0.8.28+commit.7893614a",
+  "userSourceNameMap": {
+    "contracts/PensionRegistry.sol": "project/contracts/PensionRegistry.sol"
+  },
+  "input": {
+    "language": "Solidity",
+    "settings": {
+      "evmVersion": "cancun",
+      "optimizer": {
+        "enabled": true,
+        "runs": 200
+      },
+      "outputSelection": {
+        "*": {
+          "": [
+            "ast"
+          ],
+          "*": [
+            "abi",
+            "evm.bytecode",
+            "evm.deployedBytecode",
+            "evm.methodIdentifiers",
+            "metadata"
+          ]
+        }
+      },
+      "remappings": []
+    },
+    "sources": {
+      "project/contracts/PensionRegistry.sol": {
+        "content": "// SPDX-License-Identifier: MIT\r\npragma solidity ^0.8.20;\r\n\r\ncontract PensionRegistry {\r\n\r\n    /* -------------------- ROLES -------------------- */\r\n    enum Role { NONE, PENSIONER, ADMIN }\r\n\r\n    /* -------------------- DOCUMENT STATUS -------------------- */\r\n    enum DocumentStatus { NONE, PENDING, APPROVED, REJECTED }\r\n\r\n    /* -------------------- STRUCTS -------------------- */\r\n    struct Pensioner {\r\n        string name;\r\n        uint256 dob;\r\n        bool exists;\r\n    }\r\n\r\n    struct Document {\r\n        string ipfsHash;       // CID from IPFS\r\n        string docType;        // NID, Birth Certificate, etc.\r\n        DocumentStatus status;\r\n    }\r\n\r\n    /* -------------------- STORAGE -------------------- */\r\n    mapping(address => Role) public roles;\r\n    mapping(address => Pensioner) public pensioners;\r\n\r\n    // Each pensioner can submit multiple documents\r\n    mapping(address => Document[]) public documents;\r\n\r\n    address public owner;\r\n\r\n    /* -------------------- EVENTS -------------------- */\r\n    event PensionerRegistered(address pensioner);\r\n    event DocumentSubmitted(address pensioner, string ipfsHash, string docType);\r\n\r\n    /* -------------------- CONSTRUCTOR -------------------- */\r\n    constructor() {\r\n        owner = msg.sender;\r\n        roles[msg.sender] = Role.ADMIN;\r\n    }\r\n\r\n    /* -------------------- MODIFIERS -------------------- */\r\n    modifier onlyOwner() {\r\n        require(msg.sender == owner, \"Not system owner\");\r\n        _;\r\n    }\r\n\r\n    modifier onlyAdmin() {\r\n        require(roles[msg.sender] == Role.ADMIN, \"Not admin\");\r\n        _;\r\n    }\r\n\r\n    modifier onlyPensioner() {\r\n        require(roles[msg.sender] == Role.PENSIONER, \"Not pensioner\");\r\n        _;\r\n    }\r\n\r\n    /* -------------------- REGISTRATION -------------------- */\r\n    function registerPensioner(\r\n        address _wallet,\r\n        string memory _name,\r\n        uint256 _dob\r\n    ) external onlyAdmin {\r\n\r\n        require(!pensioners[_wallet].exists, \"Already registered\");\r\n\r\n        pensioners[_wallet] = Pensioner({\r\n            name: _name,\r\n            dob: _dob,\r\n            exists: true\r\n        });\r\n\r\n        roles[_wallet] = Role.PENSIONER;\r\n\r\n        emit PensionerRegistered(_wallet);\r\n    }\r\n\r\n    function addAdmin(address _wallet) external onlyOwner {\r\n        roles[_wallet] = Role.ADMIN;\r\n    }\r\n\r\n    function getPensioner(address _wallet)\r\n        external\r\n        view\r\n        returns (string memory, uint256)\r\n    {\r\n        require(pensioners[_wallet].exists, \"Not found\");\r\n        Pensioner memory p = pensioners[_wallet];\r\n        return (p.name, p.dob);\r\n    }\r\n\r\n    /* -------------------- STEP 3.1: DOCUMENT SUBMISSION -------------------- */\r\n    function submitDocument(\r\n        string memory _ipfsHash,\r\n        string memory _docType\r\n    ) external onlyPensioner {\r\n\r\n        require(bytes(_ipfsHash).length > 0, \"Invalid IPFS hash\");\r\n        require(bytes(_docType).length > 0, \"Invalid document type\");\r\n\r\n        documents[msg.sender].push(\r\n            Document({\r\n                ipfsHash: _ipfsHash,\r\n                docType: _docType,\r\n                status: DocumentStatus.PENDING\r\n            })\r\n        );\r\n\r\n        emit DocumentSubmitted(msg.sender, _ipfsHash, _docType);\r\n    }\r\n\r\n    /* -------------------- VIEW DOCUMENTS -------------------- */\r\n    function getDocuments(address _pensioner)\r\n        external\r\n        view\r\n        returns (Document[] memory)\r\n    {\r\n        return documents[_pensioner];\r\n    }\r\n}"
+      }
+    }
+  }
+}

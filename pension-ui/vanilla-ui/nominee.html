@@ -1,0 +1,613 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Nominee Claim</title>
+
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <link href="./css/style.css" rel="stylesheet" />
+  </head>
+
+  <body>
+    <div id="toastArea" class="toast-area"></div>
+
+    <div class="d-flex nav-shell">
+      <!-- ✅ Dynamic Navbar Mount -->
+      <div id="bpNavbar" class="d-none d-lg-block"></div>
+
+      <!-- Main -->
+      <div class="flex-grow-1">
+        <div class="topbar">
+          <div
+            class="container py-3 d-flex justify-content-between align-items-center"
+          >
+            <div>
+              <div class="small text-secondary">Nominee Panel</div>
+              <div class="fw-bold">Nominee Claim Portal</div>
+            </div>
+
+            <div class="d-flex gap-2">
+              <button id="btnRefresh" class="btn btn-outline-soft">
+                Refresh
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="container py-4">
+          <!-- Hero -->
+          <div class="hero-card p-4 p-md-5 mb-4">
+            <div class="position-relative">
+              <div class="brand-pill">
+                <span class="dot" style="background: white"></span>
+                Nominee Claim
+              </div>
+
+              <h2 class="fw-bold mt-3 mb-0">Secure Pension Transfer</h2>
+              <div class="text-white-50 mt-2 small">
+                Step 1: Upload + report death using Death Certificate CID.
+                <br />
+                Step 2: Upload nominee documents (NID + Relationship Proof +
+                Bank Proof).
+                <br />
+                Step 3: Apply nominee claim (Admin will approve).
+                <br />
+                Step 4: Withdraw monthly pension OR withdraw full amount
+                (one-time if PRSS).
+              </div>
+            </div>
+          </div>
+
+          <!-- Info Cards -->
+          <div class="row g-3">
+            <div class="col-md-3">
+              <div class="soft-card p-4">
+                <div class="text-secondary small">Linked Pensioner</div>
+                <div id="linkedPensioner" class="fw-bold mt-1">—</div>
+                <div class="small text-secondary mt-1" id="linkedPensionerFull">
+                  —
+                </div>
+              </div>
+            </div>
+
+            <div class="col-md-3">
+              <div class="soft-card p-4">
+                <div class="text-secondary small">Account Status</div>
+                <div id="pensionerAccountStatus" class="fw-bold fs-5 mt-1">
+                  —
+                </div>
+                <div
+                  id="pensionerAccountStatusHint"
+                  class="small text-secondary mt-1"
+                >
+                  —
+                </div>
+              </div>
+            </div>
+
+            <div class="col-md-3">
+              <div class="soft-card p-4">
+                <div class="text-secondary small">Deceased Status</div>
+                <div id="deceasedStatus" class="fw-bold fs-4 mt-1">—</div>
+              </div>
+            </div>
+
+            <div class="col-md-3">
+              <div class="soft-card p-4">
+                <div class="text-secondary small">Claim Status</div>
+                <div id="claimStatus" class="fw-bold fs-4 mt-1">—</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ✅ NEW: Account Status Notice -->
+          <div
+            id="accountStatusNoticeBox"
+            class="soft-card p-4 mt-4 d-none"
+            style="background: #fff7ed; border: 1px solid #fed7aa"
+          >
+            <div class="fw-bold">⚠ Account Status Notice</div>
+            <div id="accountStatusNoticeText" class="text-secondary small mt-1">
+              —
+            </div>
+          </div>
+
+          <!-- Profile Box -->
+          <div class="soft-card p-4 mt-4">
+            <div class="fw-bold">Pensioner Info</div>
+            <div class="text-secondary small">
+              This info comes from the blockchain registry.
+            </div>
+
+            <div id="pensionerBox" class="mt-3 small text-secondary">
+              Loading...
+            </div>
+          </div>
+
+          <!-- ✅ Eligibility / Rule Notice -->
+          <div
+            id="nomineeEligibilityBox"
+            class="soft-card p-4 mt-4 d-none"
+            style="background: #f8fafc; border: 1px solid #e2e8f0"
+          >
+            <div id="nomineeEligibilityTitle" class="fw-bold">—</div>
+            <div id="nomineeEligibilityText" class="text-secondary small mt-1">
+              —
+            </div>
+
+            <div class="small text-secondary mt-3">
+              ⚠ Important rule: Nominee can withdraw only if the pensioner
+              started pension before death.
+            </div>
+          </div>
+
+          <!-- STEP 1: Report Death -->
+          <div class="soft-card p-4 mt-4">
+            <div class="fw-bold">Step 1: Report Death</div>
+            <div class="text-secondary small">
+              Upload the Death Certificate, CID will be saved on-chain. Admin
+              will verify it.
+            </div>
+
+            <div class="mt-3">
+              <label class="small fw-semibold mb-2"
+                >Death Certificate CID</label
+              >
+              <input
+                id="deathCertCID"
+                class="form-control input-soft"
+                placeholder="Auto filled after upload..."
+              />
+              <div class="small text-secondary mt-1">
+                Example: QmX... / bafy...
+              </div>
+            </div>
+
+            <!-- Upload Death Certificate -->
+            <div class="mt-3">
+              <label class="small fw-semibold mb-2"
+                >Upload Death Certificate (PDF/Image)</label
+              >
+              <input
+                id="deathCertFile"
+                type="file"
+                class="form-control input-soft"
+              />
+              <button
+                id="btnUploadDeathCert"
+                class="btn btn-outline-soft w-100 mt-2"
+              >
+                ⬆ Upload & Save Death Certificate
+              </button>
+              <div class="small text-secondary mt-2">
+                Tip: Upload first, CID will be auto-filled above.
+              </div>
+            </div>
+
+            <div class="row g-2 mt-3">
+              <div class="col-md-6">
+                <button id="btnReportDeath" class="btn btn-primary-soft w-100">
+                  🪦 Report Death
+                </button>
+              </div>
+
+              <div class="col-md-6">
+                <button
+                  id="btnOpenDeathProof"
+                  class="btn btn-outline-soft w-100"
+                >
+                  🔗 Open Submitted Death Proof
+                </button>
+              </div>
+            </div>
+
+            <div class="small text-secondary mt-3">
+              ⚠ You can report death only if pensioner is approved and not
+              already marked deceased.
+            </div>
+
+            <div
+              id="deathRejectReasonBox"
+              class="mt-3 p-3 rounded-4 d-none"
+              style="background: #fee2e2; border: 1px solid #fecaca"
+            >
+              <div class="fw-bold" style="color: #b91c1c">
+                Death Report Rejected Reason
+              </div>
+              <div
+                id="deathRejectReasonText"
+                class="small mt-1"
+                style="color: #7f1d1d"
+              >
+                —
+              </div>
+            </div>
+          </div>
+
+          <!-- STEP 2: Upload Nominee Documents -->
+          <div class="soft-card p-4 mt-4">
+            <div class="fw-bold">Step 2: Upload Nominee Documents</div>
+            <div class="text-secondary small">
+              Upload Nominee NID + Relationship Proof + Bank Proof. Admin will
+              approve these documents.
+            </div>
+
+            <!-- Nominee NID -->
+            <div class="mt-3">
+              <label class="small fw-semibold mb-2">Nominee NID CID</label>
+              <input
+                id="nomineeNidCID"
+                class="form-control input-soft"
+                placeholder="Auto filled after upload..."
+              />
+            </div>
+
+            <div class="mt-3">
+              <label class="small fw-semibold mb-2"
+                >Upload Nominee NID (PDF/Image)</label
+              >
+              <input
+                id="nomineeNidFile"
+                type="file"
+                class="form-control input-soft"
+              />
+              <button
+                id="btnUploadNomineeNid"
+                class="btn btn-outline-soft w-100 mt-2"
+              >
+                ⬆ Upload & Save Nominee NID
+              </button>
+            </div>
+
+            <!-- Relationship Proof -->
+            <div class="mt-4">
+              <label class="small fw-semibold mb-2"
+                >Relationship Proof CID</label
+              >
+              <input
+                id="relationProofCID"
+                class="form-control input-soft"
+                placeholder="Auto filled after upload..."
+              />
+            </div>
+
+            <div class="mt-3">
+              <label class="small fw-semibold mb-2"
+                >Upload Relationship Proof (PDF/Image)</label
+              >
+              <input
+                id="relationProofFile"
+                type="file"
+                class="form-control input-soft"
+              />
+              <button
+                id="btnUploadRelationProof"
+                class="btn btn-outline-soft w-100 mt-2"
+              >
+                ⬆ Upload & Save Relationship Proof
+              </button>
+            </div>
+
+            <!-- Nominee Bank Proof -->
+            <div class="mt-4">
+              <label class="small fw-semibold mb-2"
+                >Nominee Bank Proof CID</label
+              >
+              <input
+                id="nomineeBankCID"
+                class="form-control input-soft"
+                placeholder="Auto filled after upload..."
+              />
+              <div class="small text-secondary mt-1">
+                Example: Bank account certificate / cheque copy / bank statement
+              </div>
+            </div>
+
+            <div class="mt-3">
+              <label class="small fw-semibold mb-2"
+                >Upload Nominee Bank Proof (PDF/Image)</label
+              >
+              <input
+                id="nomineeBankFile"
+                type="file"
+                class="form-control input-soft"
+              />
+              <button
+                id="btnUploadNomineeBank"
+                class="btn btn-outline-soft w-100 mt-2"
+              >
+                ⬆ Upload & Save Nominee Bank Proof
+              </button>
+            </div>
+
+            <div class="row g-2 mt-4">
+              <div class="col-md-6">
+                <button id="btnApplyClaim" class="btn btn-primary-soft w-100">
+                  📩 Apply Claim
+                </button>
+              </div>
+
+              <div class="col-md-6">
+                <button
+                  id="btnOpenClaimProof"
+                  class="btn btn-outline-soft w-100"
+                >
+                  🔗 Open Submitted Claim Proof
+                </button>
+              </div>
+            </div>
+
+            <div class="small text-secondary mt-3">
+              ⚠ You can apply only after admin verifies the death report.
+            </div>
+
+            <div
+              id="claimRejectReasonBox"
+              class="mt-3 p-3 rounded-4 d-none"
+              style="background: #fee2e2; border: 1px solid #fecaca"
+            >
+              <div class="fw-bold" style="color: #b91c1c">
+                Claim Rejected Reason
+              </div>
+              <div
+                id="claimRejectReasonText"
+                class="small mt-1"
+                style="color: #7f1d1d"
+              >
+                —
+              </div>
+            </div>
+          </div>
+
+          <!-- STEP 3: Withdraw Pension (Nominee) -->
+          <div class="soft-card p-4 mt-4">
+            <div class="fw-bold">Step 3: Withdraw Pension (Nominee)</div>
+            <div class="text-secondary small">
+              After admin approves your claim, you can withdraw pension.
+              <b>Pension must already be started by the pensioner.</b>
+            </div>
+
+            <div class="row g-3 mt-3">
+              <div class="col-md-4">
+                <div class="soft-card p-3">
+                  <div class="text-secondary small">Pension Started</div>
+                  <div id="nomineePensionStarted" class="fw-bold fs-4 mt-1">
+                    —
+                  </div>
+                </div>
+              </div>
+
+              <div class="col-md-4">
+                <div class="soft-card p-3">
+                  <div class="text-secondary small">Pension Mode</div>
+                  <div id="nomineePensionMode" class="fw-bold fs-4 mt-1">—</div>
+                </div>
+              </div>
+
+              <div class="col-md-4">
+                <div class="soft-card p-3">
+                  <div class="text-secondary small">Monthly Amount</div>
+                  <div id="nomineeMonthlyAmount" class="fw-bold fs-4 mt-1">
+                    —
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- GPS GRATUITY BOX -->
+            <div
+              id="gpsNomineeGratuityBox"
+              class="soft-card p-4 mt-4 d-none"
+              style="background: #f8fafc; border: 1px solid #e2e8f0"
+            >
+              <div class="fw-bold">GPS Gratuity (One-Time)</div>
+              <div class="text-secondary small">
+                If the pensioner didn’t claim gratuity before death, nominee can
+                claim it once.
+              </div>
+
+              <div class="row g-3 mt-2">
+                <div class="col-md-4">
+                  <div class="small text-secondary">Gratuity Status</div>
+                  <div id="gpsNomineeGratuityStatus" class="fw-bold fs-5">
+                    —
+                  </div>
+                </div>
+
+                <div class="col-md-4">
+                  <div class="small text-secondary">Estimated Amount</div>
+                  <div id="gpsNomineeGratuityAmount" class="fw-bold fs-5">
+                    —
+                  </div>
+                </div>
+
+                <div class="col-md-4">
+                  <div class="small text-secondary">Eligibility</div>
+                  <div id="gpsNomineeGratuityEligible" class="fw-bold fs-5">
+                    —
+                  </div>
+                </div>
+              </div>
+
+              <div class="row g-2 mt-3">
+                <div class="col-md-12">
+                  <button
+                    id="btnNomineeClaimGratuity"
+                    class="btn btn-outline-soft w-100"
+                  >
+                    🎁 Claim GPS Gratuity (Nominee One-Time)
+                  </button>
+                </div>
+              </div>
+
+              <div class="small text-secondary mt-3">
+                ✅ Gratuity is independent from pension mode. Nominee can claim
+                it once if eligible.
+              </div>
+            </div>
+
+            <!-- Family Pension Limit UI -->
+            <div class="row g-3 mt-3">
+              <div class="col-md-4">
+                <div class="soft-card p-3">
+                  <div class="text-secondary small">Family Pension Allowed</div>
+                  <div id="familyPensionAllowed" class="fw-bold fs-5 mt-1">
+                    —
+                  </div>
+                  <div class="small text-secondary mt-1" id="familyPensionHint">
+                    —
+                  </div>
+                </div>
+              </div>
+
+              <div class="col-md-4">
+                <div class="soft-card p-3">
+                  <div class="text-secondary small">Used Months</div>
+                  <div id="familyPensionUsedMonths" class="fw-bold fs-4 mt-1">
+                    —
+                  </div>
+                </div>
+              </div>
+
+              <div class="col-md-4">
+                <div class="soft-card p-3">
+                  <div class="text-secondary small">Remaining Months</div>
+                  <div
+                    id="familyPensionRemainingMonths"
+                    class="fw-bold fs-4 mt-1"
+                  >
+                    —
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="row g-2 mt-3">
+              <div class="col-md-12">
+                <button
+                  id="btnWithdrawNominee"
+                  class="btn btn-primary-soft w-100"
+                >
+                  💸 Withdraw Monthly Pension (Nominee)
+                </button>
+              </div>
+            </div>
+
+            <div class="row g-2 mt-2">
+              <div class="col-md-12">
+                <button
+                  id="btnNomineeWithdrawFull"
+                  class="btn btn-outline-danger w-100"
+                >
+                  💰 Withdraw Full Amount (Nominee One Time)
+                </button>
+              </div>
+            </div>
+
+            <div class="small text-secondary mt-3">
+              ⚠ Withdraw is allowed once every 30 days. If it says "Too early",
+              wait and try next month.
+            </div>
+
+            <div class="small text-secondary mt-1">
+              ⚠ Full withdrawal is one-time and permanently disables monthly
+              pension (PRSS only).
+            </div>
+          </div>
+
+          <!-- Nominee History -->
+          <div class="soft-card p-4 mt-4">
+            <div class="d-flex justify-content-between align-items-center">
+              <div>
+                <div class="fw-bold">Nominee History</div>
+                <div class="text-secondary small">
+                  These logs are read from blockchain events (time + tx).
+                </div>
+              </div>
+
+              <div class="d-flex gap-2">
+                <button id="btnLoadNomineeHistory" class="btn btn-outline-soft">
+                  Load History
+                </button>
+              </div>
+            </div>
+
+            <div class="row g-3 mt-3">
+              <div class="col-md-4">
+                <div class="p-3 rounded-4" style="background: #0b1220">
+                  <div class="small text-white-50">Death Report Submitted</div>
+                  <div id="deathReportedAt" class="fw-bold text-white mt-1">
+                    —
+                  </div>
+                </div>
+              </div>
+
+              <div class="col-md-4">
+                <div class="p-3 rounded-4" style="background: #0b1220">
+                  <div class="small text-white-50">Claim Applied</div>
+                  <div id="claimAppliedAt" class="fw-bold text-white mt-1">
+                    —
+                  </div>
+                </div>
+              </div>
+
+              <div class="col-md-4">
+                <div class="p-3 rounded-4" style="background: #0b1220">
+                  <div class="small text-white-50">Claim Approved</div>
+                  <div id="claimApprovedAt" class="fw-bold text-white mt-1">
+                    —
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <hr class="my-4" />
+
+            <div class="fw-bold">Nominee Withdrawal History</div>
+            <div class="text-secondary small">
+              Shows nominee pension withdrawals (amount + time).
+            </div>
+
+            <div class="table-responsive mt-3">
+              <table class="table table-sm align-middle">
+                <thead>
+                  <tr class="text-secondary small">
+                    <th>#</th>
+                    <th>Amount (ETH)</th>
+                    <th>Time</th>
+                    <th>Tx</th>
+                  </tr>
+                </thead>
+                <tbody id="nomineeWithdrawHistoryBody">
+                  <tr>
+                    <td colspan="4" class="text-secondary small">
+                      Click "Load History"
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="small text-secondary mt-3">
+              ⚠ On Hardhat local chain, logs reset after redeploy/restart.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/ethers@6.13.4/dist/ethers.umd.min.js"></script>
+
+    <!-- Navbar Loader -->
+    <script type="module">
+      import { loadNavbar } from "./js/navbar.js";
+      loadNavbar();
+    </script>
+
+    <script type="module" src="./js/app-nominee.js"></script>
+  </body>
+</html>

@@ -1,0 +1,538 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Admin Dashboard</title>
+
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <link href="./css/style.css" rel="stylesheet" />
+  </head>
+
+  <body>
+    <div id="toastArea" class="toast-area"></div>
+
+    <div class="d-flex nav-shell">
+      <!-- ✅ Dynamic Navbar Mount (OLD DESIGN STYLE) -->
+      <div id="bpNavbar" class="d-none d-lg-block"></div>
+
+      <!-- Main -->
+      <div class="flex-grow-1">
+        <!-- Topbar (OLD DESIGN STYLE) -->
+        <div class="topbar">
+          <div
+            class="container py-3 d-flex justify-content-between align-items-center"
+          >
+            <div>
+              <div class="small text-secondary">Admin Panel</div>
+              <div class="fw-bold">Applications Control Center</div>
+            </div>
+
+            <div class="d-flex align-items-center gap-2">
+              <span class="badge-soft">
+                <span class="dot"></span> Admin Mode
+              </span>
+
+              <button id="btnRefresh" class="btn btn-outline-soft btn-sm">
+                Refresh
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="container py-4">
+          <!-- Tabs -->
+          <div class="d-flex gap-2 mb-3 flex-wrap">
+            <button id="tabPending" class="btn btn-primary-soft btn-sm">
+              🟡 Pending
+            </button>
+
+            <button id="tabAll" class="btn btn-outline-soft btn-sm">
+              📋 All Pensioners
+            </button>
+
+            <button id="tabDeathReports" class="btn btn-outline-soft btn-sm">
+              🪦 Death Reports
+            </button>
+
+            <button id="tabDeceased" class="btn btn-outline-soft btn-sm">
+              ⚫ Deceased
+            </button>
+
+            <!-- ✅ NEW: Closure Requests -->
+            <button id="tabClosureRequests" class="btn btn-outline-soft btn-sm">
+              🧾 Closure Requests
+            </button>
+
+            <!-- ✅ GPS Fund Tab -->
+            <button id="tabGpsFund" class="btn btn-outline-soft btn-sm">
+              🏦 GPS Fund
+            </button>
+
+            <button id="tabHistory" class="btn btn-outline-soft btn-sm">
+              🕒 History
+            </button>
+          </div>
+
+          <!-- Pending Section -->
+          <div id="pendingSection" class="soft-card p-4">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <div class="fw-bold">Pending Applications</div>
+              <div class="small text-secondary">
+                Review docs, approve/reject pensioners
+              </div>
+            </div>
+
+            <div class="table-responsive">
+              <table class="table align-middle mb-0">
+                <thead>
+                  <tr class="text-secondary small">
+                    <th style="width: 60px">#</th>
+                    <th>Wallet</th>
+                    <th style="width: 140px">Status</th>
+                    <th style="width: 120px">Action</th>
+                  </tr>
+                </thead>
+                <tbody id="pendingTable"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- All Pensioners Section -->
+          <div id="allSection" class="soft-card p-4 d-none mt-3">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <div class="fw-bold">All Pensioners</div>
+              <div class="small text-secondary">
+                View every applicant (Pending / Approved / Rejected / Deceased)
+              </div>
+            </div>
+
+            <div class="table-responsive">
+              <table class="table align-middle mb-0">
+                <thead>
+                  <tr class="text-secondary small">
+                    <th style="width: 60px">#</th>
+                    <th>Wallet</th>
+                    <th style="width: 140px">Status</th>
+                    <th style="width: 150px">Death Report</th>
+                    <th style="width: 110px">Deceased</th>
+                    <th style="width: 140px">Nominee Claim</th>
+                    <th style="width: 120px">Action</th>
+                  </tr>
+                </thead>
+                <tbody id="allTable"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Death Reports Section -->
+          <div id="deathReportSection" class="soft-card p-4 d-none mt-3">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <div class="fw-bold">Death Reports</div>
+              <div class="small text-secondary">
+                Nominee submitted death certificate, admin verifies
+              </div>
+            </div>
+
+            <div class="table-responsive">
+              <table class="table align-middle mb-0">
+                <thead>
+                  <tr class="text-secondary small">
+                    <th style="width: 60px">#</th>
+                    <th>Pensioner Wallet</th>
+                    <th style="width: 160px">Report Status</th>
+                    <th style="width: 220px">Proof</th>
+                    <th style="width: 120px">Action</th>
+                  </tr>
+                </thead>
+                <tbody id="deathReportTable"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Deceased Section -->
+          <div id="deceasedSection" class="soft-card p-4 d-none mt-3">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <div class="fw-bold">Deceased Pensioners</div>
+              <div class="small text-secondary">
+                Verified deceased + nominee claim review
+              </div>
+            </div>
+
+            <div class="table-responsive">
+              <table class="table align-middle mb-0">
+                <thead>
+                  <tr class="text-secondary small">
+                    <th style="width: 60px">#</th>
+                    <th>Pensioner Wallet</th>
+                    <th style="width: 110px">Deceased</th>
+                    <th style="width: 140px">Nominee Claim</th>
+                    <th style="width: 120px">Action</th>
+                  </tr>
+                </thead>
+                <tbody id="deceasedTable"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- ✅ NEW: Closure Requests Section -->
+          <div id="closureSection" class="soft-card p-4 d-none mt-3">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <div class="fw-bold">Closure Requests</div>
+              <div class="small text-secondary">
+                Pensioners requested account closure (soft delete). Admin can
+                approve.
+              </div>
+            </div>
+
+            <div class="table-responsive">
+              <table class="table align-middle mb-0">
+                <thead>
+                  <tr class="text-secondary small">
+                    <th style="width: 60px">#</th>
+                    <th>Pensioner Wallet</th>
+                    <th style="width: 220px">Reason</th>
+                    <th style="width: 160px">Requested At</th>
+                    <th style="width: 120px">Action</th>
+                  </tr>
+                </thead>
+                <tbody id="closureTable"></tbody>
+              </table>
+            </div>
+
+            <div class="small text-secondary mt-3">
+              ⚠ Closing an account will permanently disable that pensioner from
+              using the system.
+            </div>
+          </div>
+
+          <!-- GPS Fund Section -->
+          <div id="gpsFundSection" class="soft-card p-4 d-none mt-3">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <div>
+                <div class="fw-bold">GPS Fund Management</div>
+                <div class="small text-secondary">
+                  Allocate and track GPS pension payments
+                </div>
+              </div>
+
+              <button id="btnReloadGpsFund" class="btn btn-outline-soft btn-sm">
+                Reload
+              </button>
+            </div>
+
+            <div class="table-responsive">
+              <table class="table align-middle mb-0">
+                <thead>
+                  <tr class="text-secondary small">
+                    <th style="width: 60px">#</th>
+                    <th>Pensioner</th>
+                    <th style="width: 90px">Program</th>
+                    <th style="width: 140px">Monthly Pension</th>
+                    <th style="width: 120px">Gratuity</th>
+                    <th style="width: 140px">Recommended</th>
+                    <th style="width: 140px">Total Allocated</th>
+                    <th style="width: 110px">Total Paid</th>
+                    <th style="width: 110px">Remaining</th>
+                    <th style="width: 150px">Need To Allocate</th>
+                    <th style="width: 140px">Action</th>
+                  </tr>
+                </thead>
+                <tbody id="gpsFundTable"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- History Section -->
+          <div id="historySection" class="soft-card p-4 d-none mt-3">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <div>
+                <div class="fw-bold">Admin History</div>
+                <div class="small text-secondary">
+                  These logs are read from blockchain events.
+                </div>
+              </div>
+
+              <button
+                id="btnLoadAdminHistory"
+                class="btn btn-outline-soft btn-sm"
+              >
+                Load History
+              </button>
+            </div>
+
+            <div class="table-responsive">
+              <table class="table align-middle mb-0">
+                <thead>
+                  <tr class="text-secondary small">
+                    <th>#</th>
+                    <th>Type</th>
+                    <th>Pensioner</th>
+                    <th>Nominee</th>
+                    <th>Admin</th>
+                    <th>Time</th>
+                    <th>Tx</th>
+                  </tr>
+                </thead>
+
+                <tbody id="adminHistoryTable">
+                  <tr>
+                    <td colspan="7" class="text-secondary small">
+                      Click "Load History"
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="small text-secondary mt-3">
+              ⚠ Admin wallet address is not available unless contract event
+              includes admin.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Review Modal -->
+    <div class="modal fade" id="reviewModal" tabindex="-1">
+      <div
+        class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable"
+      >
+        <div class="modal-content soft-card">
+          <div class="modal-header border-0">
+            <div>
+              <h5 class="modal-title fw-bold">Review Applicant</h5>
+              <div class="small text-secondary">
+                Wallet: <span id="modalWallet" class="fw-semibold">—</span>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="modal"
+            ></button>
+          </div>
+
+          <div class="modal-body">
+            <div class="row g-3">
+              <!-- Left Column -->
+              <div class="col-lg-4">
+                <div class="soft-card p-3 mb-3">
+                  <div class="fw-bold">Pensioner Profile</div>
+                  <div id="profileBox" class="mt-2 small text-secondary">
+                    Loading...
+                  </div>
+                </div>
+
+                <div class="soft-card p-3 mb-3">
+                  <div class="fw-bold">Nominee / Death / Claim</div>
+                  <div id="nomineeClaimBox" class="mt-2 small text-secondary">
+                    Loading...
+                  </div>
+
+                  <hr class="my-3" />
+
+                  <div class="small fw-semibold mb-2">Reject Reasons</div>
+
+                  <div class="mb-2">
+                    <input
+                      id="rejectReason"
+                      class="form-control input-soft"
+                      placeholder="Rejection reason (pensioner)..."
+                    />
+                  </div>
+
+                  <div class="mb-2">
+                    <input
+                      id="nomineeRejectReason"
+                      class="form-control input-soft"
+                      placeholder="Reject reason (nominee claim)..."
+                    />
+                  </div>
+
+                  <div class="mb-2">
+                    <input
+                      id="deathRejectReason"
+                      class="form-control input-soft"
+                      placeholder="Reject reason (death report)..."
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <!-- Right Column -->
+              <div class="col-lg-8">
+                <div class="soft-card p-3 mb-3">
+                  <div
+                    class="d-flex justify-content-between align-items-center"
+                  >
+                    <div class="fw-bold">Documents</div>
+                    <div class="small text-secondary">
+                      Review submitted docs (approve/reject)
+                    </div>
+                  </div>
+
+                  <div id="docsList" class="mt-3">Loading documents...</div>
+                </div>
+
+                <div id="gpsVerifySection" class="soft-card p-3 d-none">
+                  <div
+                    class="d-flex justify-content-between align-items-center"
+                  >
+                    <div>
+                      <div class="fw-bold">GPS Service Info</div>
+                      <div class="small text-secondary">
+                        Admin must verify GPS data before approving GPS
+                        pensioner
+                      </div>
+                    </div>
+
+                    <div id="gpsVerifiedBadge" class="badge-soft">
+                      <span class="dot"></span> Not Verified
+                    </div>
+                  </div>
+
+                  <div id="gpsInfoBox" class="mt-3 small text-secondary">
+                    Loading...
+                  </div>
+
+                  <div class="mt-3">
+                    <button
+                      id="btnVerifyGPS"
+                      class="btn btn-primary-soft btn-sm"
+                    >
+                      Verify GPS Data
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div
+            class="modal-footer border-0 d-flex justify-content-between flex-wrap gap-2"
+          >
+            <div class="d-flex gap-2 flex-wrap">
+              <button id="btnApproveAll" class="btn btn-primary-soft">
+                Approve All + Approve Pensioner
+              </button>
+
+              <button
+                id="btnRejectPensioner"
+                class="btn"
+                style="
+                  background: #fee2e2;
+                  border: 1px solid #fecaca;
+                  color: #b91c1c;
+                  font-weight: 800;
+                  border-radius: 16px;
+                  padding: 12px 16px;
+                "
+              >
+                Reject Pensioner
+              </button>
+            </div>
+
+            <div class="d-flex gap-2 flex-wrap">
+              <button id="btnVerifyDeath" class="btn btn-outline-soft">
+                Verify Death
+              </button>
+              <button id="btnRejectDeath" class="btn btn-outline-soft">
+                Reject Death
+              </button>
+
+              <button id="btnApproveNominee" class="btn btn-outline-soft">
+                Approve Nominee Claim
+              </button>
+              <button id="btnRejectNominee" class="btn btn-outline-soft">
+                Reject Nominee Claim
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- GPS Verify Modal -->
+    <div class="modal fade" id="gpsVerifyModal" tabindex="-1">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content soft-card">
+          <div class="modal-header border-0">
+            <div>
+              <h5 class="modal-title fw-bold">Verify GPS Data</h5>
+              <div class="small text-secondary">
+                Pensioner:
+                <span id="gpsVerifyWallet" class="fw-semibold">—</span>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="modal"
+            ></button>
+          </div>
+
+          <div class="modal-body">
+            <div class="mb-2">
+              <label class="form-label small fw-semibold"
+                >Verified Basic Salary (BDT)</label
+              >
+              <input
+                id="gpsVerifiedSalary"
+                type="number"
+                min="0"
+                class="form-control input-soft"
+              />
+            </div>
+
+            <div class="mb-2">
+              <label class="form-label small fw-semibold"
+                >Verified Service Years</label
+              >
+              <input
+                id="gpsVerifiedYears"
+                type="number"
+                min="0"
+                class="form-control input-soft"
+              />
+            </div>
+
+            <div class="mb-2">
+              <label class="form-label small fw-semibold"
+                >Verified Employee ID</label
+              >
+              <input
+                id="gpsVerifiedEmpId"
+                type="text"
+                class="form-control input-soft"
+              />
+            </div>
+          </div>
+
+          <div class="modal-footer border-0">
+            <button id="btnGpsVerifyConfirm" class="btn btn-primary-soft w-100">
+              Confirm Verify
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/ethers@6.13.4/dist/ethers.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script type="module">
+      import { loadNavbar } from "./js/navbar.js";
+      loadNavbar();
+    </script>
+
+    <script type="module" src="./js/app-admin.js"></script>
+  </body>
+</html>

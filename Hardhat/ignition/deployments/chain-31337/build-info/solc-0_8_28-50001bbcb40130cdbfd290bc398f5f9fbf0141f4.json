@@ -1,0 +1,39 @@
+{
+  "_format": "hh3-sol-build-info-1",
+  "id": "solc-0_8_28-50001bbcb40130cdbfd290bc398f5f9fbf0141f4",
+  "solcVersion": "0.8.28",
+  "solcLongVersion": "0.8.28+commit.7893614a",
+  "userSourceNameMap": {
+    "contracts/PensionDocuments.sol": "project/contracts/PensionDocuments.sol"
+  },
+  "input": {
+    "language": "Solidity",
+    "settings": {
+      "evmVersion": "cancun",
+      "optimizer": {
+        "enabled": true,
+        "runs": 200
+      },
+      "outputSelection": {
+        "*": {
+          "": [
+            "ast"
+          ],
+          "*": [
+            "abi",
+            "evm.bytecode",
+            "evm.deployedBytecode",
+            "evm.methodIdentifiers",
+            "metadata"
+          ]
+        }
+      },
+      "remappings": []
+    },
+    "sources": {
+      "project/contracts/PensionDocuments.sol": {
+        "content": "// SPDX-License-Identifier: MIT\r\npragma solidity ^0.8.20;\r\n\r\n/* -------------------- REGISTRY INTERFACE -------------------- */\r\ninterface IPensionRegistry {\r\n    function roles(address user) external view returns (uint8);\r\n}\r\n\r\ncontract PensionDocuments {\r\n\r\n    /* -------------------- DOCUMENT STATUS -------------------- */\r\n    enum DocumentStatus {\r\n        NONE,\r\n        SUBMITTED,\r\n        APPROVED,\r\n        REJECTED\r\n    }\r\n\r\n    struct Document {\r\n        string ipfsHash;\r\n        DocumentStatus status;\r\n        string rejectReason;\r\n    }\r\n\r\n    /* -------------------- STORAGE -------------------- */\r\n    IPensionRegistry public registry;\r\n    mapping(address => Document[]) public documents;\r\n\r\n    /* -------------------- EVENTS -------------------- */\r\n    event DocumentSubmitted(address indexed pensioner, string ipfsHash);\r\n    event DocumentApproved(address indexed pensioner, uint256 index);\r\n    event DocumentRejected(address indexed pensioner, uint256 index, string reason);\r\n\r\n    /* -------------------- CONSTRUCTOR -------------------- */\r\n    constructor(address _registryAddress) {\r\n        registry = IPensionRegistry(_registryAddress);\r\n    }\r\n\r\n    /* -------------------- MODIFIERS -------------------- */\r\n    modifier onlyPensioner() {\r\n        require(registry.roles(msg.sender) == 1, \"Not pensioner\");\r\n        _;\r\n    }\r\n\r\n    modifier onlyAdmin() {\r\n        require(registry.roles(msg.sender) == 2, \"Not admin\");\r\n        _;\r\n    }\r\n\r\n    /* -------------------- SUBMIT DOCUMENT -------------------- */\r\n    function submitDocument(string memory _ipfsHash)\r\n        external\r\n        onlyPensioner\r\n    {\r\n        require(bytes(_ipfsHash).length > 0, \"Invalid IPFS hash\");\r\n\r\n        documents[msg.sender].push(\r\n            Document({\r\n                ipfsHash: _ipfsHash,\r\n                status: DocumentStatus.SUBMITTED,\r\n                rejectReason: \"\"\r\n            })\r\n        );\r\n\r\n        emit DocumentSubmitted(msg.sender, _ipfsHash);\r\n    }\r\n\r\n    /* -------------------- ADMIN ACTIONS -------------------- */\r\n    function approveDocument(address pensioner, uint256 index)\r\n        external\r\n        onlyAdmin\r\n    {\r\n        require(\r\n            documents[pensioner][index].status == DocumentStatus.SUBMITTED,\r\n            \"Not submitted\"\r\n        );\r\n\r\n        documents[pensioner][index].status = DocumentStatus.APPROVED;\r\n        emit DocumentApproved(pensioner, index);\r\n    }\r\n\r\n    function rejectDocument(\r\n        address pensioner,\r\n        uint256 index,\r\n        string memory reason\r\n    ) external onlyAdmin {\r\n\r\n        require(\r\n            documents[pensioner][index].status == DocumentStatus.SUBMITTED,\r\n            \"Not submitted\"\r\n        );\r\n\r\n        documents[pensioner][index].status = DocumentStatus.REJECTED;\r\n        documents[pensioner][index].rejectReason = reason;\r\n\r\n        emit DocumentRejected(pensioner, index, reason);\r\n    }\r\n\r\n    /* -------------------- VIEW -------------------- */\r\n    function getDocuments(address pensioner)\r\n        external\r\n        view\r\n        returns (Document[] memory)\r\n    {\r\n        return documents[pensioner];\r\n    }\r\n}\r\n"
+      }
+    }
+  }
+}
