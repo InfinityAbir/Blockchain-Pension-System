@@ -12,6 +12,30 @@ This project simulates a realistic pension workflow based on Bangladesh-style pe
 - Batch document upload & batch admin review (reduces MetaMask popups)
 
 ---
+## 📸 Screenshots
+
+### 🏠 Home / Login
+![Home](screenshots/home.png)
+
+### 👤 Pensioner Registration
+![Pensioner Dashboard](screenshots/pensioner-register.png)
+
+### 👤 Pensioner Documents Upload
+![Pensioner Dashboard](screenshots/documents-upload.png)
+
+### 👤 Pensioner Dashboard
+![Pensioner Dashboard](screenshots/pensioner-dashboard.png)
+
+### 🧑‍🤝‍🧑 Nominee Dashboard
+![Nominee Dashboard](screenshots/nominee-dashboard.png)
+
+### 👮 Admin Dashboard
+![Admin Dashboard](screenshots/admin-dashboard.png)
+
+### 👮 Admin Review
+![Admin Dashboard](screenshots/admin-review.png)
+
+---
 
 ## 📌 Project Structure
 
