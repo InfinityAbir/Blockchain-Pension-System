@@ -1021,23 +1021,58 @@ async function loadAdminHistory() {
       }
     }
 
+    // ✅ UPDATED: Now captures admin parameter (args[2])
+    await safeLoadEvent(registry, "PensionerApproved", "Pensioner Approved", {
+      filterArgs: [null, null],
+      parse: (log) => ({
+        pensioner: log?.args?.user ?? log?.args?.[0],
+        nominee: "—",
+        admin: log?.args?.admin ?? log?.args?.[1] ?? "—",
+        timestamp: log?.args?.reviewedAt ?? log?.args?.[2],
+      }),
+    });
+
+    // ✅ UPDATED: Now captures admin parameter (args[1])
+    await safeLoadEvent(registry, "PensionerRejected", "Pensioner Rejected", {
+      filterArgs: [null, null, null],
+      parse: (log) => ({
+        pensioner: log?.args?.user ?? log?.args?.[0],
+        nominee: "—",
+        admin: log?.args?.admin ?? log?.args?.[1] ?? "—",
+        timestamp: log?.args?.reviewedAt ?? log?.args?.[3],
+      }),
+    });
+
+    // ✅ UPDATED: Now captures admin parameter (args[1])
+    await safeLoadEvent(registry, "GPSDataVerified", "GPS Data Verified", {
+      filterArgs: [null, null],
+      parse: (log) => ({
+        pensioner: log?.args?.pensioner ?? log?.args?.[0],
+        nominee: "—",
+        admin: log?.args?.admin ?? log?.args?.[1] ?? "—",
+        timestamp: log?.args?.timestamp ?? log?.args?.[5],
+      }),
+    });
+
+    // ✅ UPDATED: Now captures admin parameter (args[2])
     await safeLoadEvent(registry, "DeathReportVerified", "Death Verified", {
       filterArgs: [null, null, null],
       parse: (log) => ({
         pensioner: log?.args?.pensioner ?? log?.args?.[0],
         nominee: log?.args?.nominee ?? log?.args?.[1],
-        admin: "—",
-        timestamp: log?.args?.timestamp ?? log?.args?.[2],
+        admin: log?.args?.admin ?? log?.args?.[2] ?? "—",
+        timestamp: log?.args?.timestamp ?? log?.args?.[3],
       }),
     });
 
+    // ✅ UPDATED: Now captures admin parameter (args[2])
     await safeLoadEvent(registry, "DeathReportRejected", "Death Rejected", {
       filterArgs: [null, null, null, null],
       parse: (log) => ({
         pensioner: log?.args?.pensioner ?? log?.args?.[0],
         nominee: log?.args?.nominee ?? log?.args?.[1],
-        admin: "—",
-        timestamp: log?.args?.timestamp ?? log?.args?.[3],
+        admin: log?.args?.admin ?? log?.args?.[2] ?? "—",
+        timestamp: log?.args?.timestamp ?? log?.args?.[4],
       }),
     });
 
@@ -1051,23 +1086,36 @@ async function loadAdminHistory() {
       }),
     });
 
+    // ✅ UPDATED: Now captures admin parameter (args[2])
     await safeLoadEvent(registry, "NomineeClaimApproved", "Claim Approved", {
       filterArgs: [null, null, null],
       parse: (log) => ({
         pensioner: log?.args?.pensioner ?? log?.args?.[0],
         nominee: log?.args?.nominee ?? log?.args?.[1],
-        admin: "—",
-        timestamp: log?.args?.timestamp ?? log?.args?.[2],
+        admin: log?.args?.admin ?? log?.args?.[2] ?? "—",
+        timestamp: log?.args?.timestamp ?? log?.args?.[3],
       }),
     });
 
+    // ✅ UPDATED: Now captures admin parameter (args[2])
     await safeLoadEvent(registry, "NomineeClaimRejected", "Claim Rejected", {
       filterArgs: [null, null, null, null],
       parse: (log) => ({
         pensioner: log?.args?.pensioner ?? log?.args?.[0],
         nominee: log?.args?.nominee ?? log?.args?.[1],
-        admin: "—",
-        timestamp: log?.args?.timestamp ?? log?.args?.[3],
+        admin: log?.args?.admin ?? log?.args?.[2] ?? "—",
+        timestamp: log?.args?.timestamp ?? log?.args?.[4],
+      }),
+    });
+
+    // ✅ UPDATED: Now captures admin parameter (args[1])
+    await safeLoadEvent(registry, "AccountClosed", "Account Closed", {
+      filterArgs: [null, null],
+      parse: (log) => ({
+        pensioner: log?.args?.pensioner ?? log?.args?.[0],
+        nominee: "—",
+        admin: log?.args?.admin ?? log?.args?.[1] ?? "—",
+        timestamp: log?.args?.timestamp ?? log?.args?.[2],
       }),
     });
 
