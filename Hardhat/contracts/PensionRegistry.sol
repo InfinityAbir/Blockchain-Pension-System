@@ -158,13 +158,27 @@ contract PensionRegistry {
         uint256 appliedAt
     );
 
-    event PensionerApproved(address indexed user, uint256 reviewedAt);
-    event PensionerRejected(address indexed user, string reason, uint256 reviewedAt);
+    // ✅ UPDATED: Added indexed admin parameter
+    event PensionerApproved(
+        address indexed user,
+        address indexed admin,
+        uint256 reviewedAt
+    );
+
+    // ✅ UPDATED: Added indexed admin parameter
+    event PensionerRejected(
+        address indexed user,
+        address indexed admin,
+        string reason,
+        uint256 reviewedAt
+    );
 
     event DocumentsContractUpdated(address indexed documentsAddress);
 
+    // ✅ UPDATED: Added indexed admin parameter
     event GPSDataVerified(
         address indexed pensioner,
+        address indexed admin,
         uint256 verifiedBasicSalaryBDT,
         uint256 verifiedServiceYears,
         string verifiedEmployeeId,
@@ -180,15 +194,19 @@ contract PensionRegistry {
         uint256 timestamp
     );
 
+    // ✅ UPDATED: Added indexed admin parameter
     event DeathReportVerified(
         address indexed pensioner,
         address indexed nominee,
+        address indexed admin,
         uint256 timestamp
     );
 
+    // ✅ UPDATED: Added indexed admin parameter
     event DeathReportRejected(
         address indexed pensioner,
         address indexed nominee,
+        address indexed admin,
         string reason,
         uint256 timestamp
     );
@@ -201,15 +219,19 @@ contract PensionRegistry {
         uint256 timestamp
     );
 
+    // ✅ UPDATED: Added indexed admin parameter
     event NomineeClaimApproved(
         address indexed pensioner,
         address indexed nominee,
+        address indexed admin,
         uint256 timestamp
     );
 
+    // ✅ UPDATED: Added indexed admin parameter
     event NomineeClaimRejected(
         address indexed pensioner,
         address indexed nominee,
+        address indexed admin,
         string reason,
         uint256 timestamp
     );
@@ -218,7 +240,13 @@ contract PensionRegistry {
 
     // ✅ NEW: Deactivate / closure events
     event AccountClosureRequested(address indexed pensioner, string reason, uint256 timestamp);
-    event AccountClosed(address indexed pensioner, address indexed admin, uint256 timestamp);
+
+    // ✅ UPDATED: Added indexed admin parameter
+    event AccountClosed(
+        address indexed pensioner,
+        address indexed admin,
+        uint256 timestamp
+    );
 
     /* ===================== CONSTRUCTOR ===================== */
     constructor(address documentsAddress) {
@@ -379,8 +407,10 @@ contract PensionRegistry {
         p.verifiedServiceYears = verifiedServiceYears;
         p.verifiedEmployeeId = verifiedEmployeeId;
 
+        // ✅ UPDATED: Now includes msg.sender (admin)
         emit GPSDataVerified(
             pensioner,
+            msg.sender,
             verifiedBasicSalaryBDT,
             verifiedServiceYears,
             verifiedEmployeeId,
@@ -549,7 +579,8 @@ contract PensionRegistry {
         pensioners[_user].reviewedAt = block.timestamp;
         pensioners[_user].rejectionReason = "";
 
-        emit PensionerApproved(_user, block.timestamp);
+        // ✅ UPDATED: Now includes msg.sender (admin)
+        emit PensionerApproved(_user, msg.sender, block.timestamp);
     }
 
     function rejectPensioner(address _user, string calldata _reason) external onlyAdmin {
@@ -563,7 +594,8 @@ contract PensionRegistry {
         pensioners[_user].reviewedAt = block.timestamp;
         pensioners[_user].rejectionReason = _reason;
 
-        emit PensionerRejected(_user, _reason, block.timestamp);
+        // ✅ UPDATED: Now includes msg.sender (admin)
+        emit PensionerRejected(_user, msg.sender, _reason, block.timestamp);
     }
 
     /* ============================================================
@@ -605,6 +637,7 @@ contract PensionRegistry {
         p.accountStatus = AccountStatus.CLOSED;
         p.closedAt = block.timestamp;
 
+        // ✅ UPDATED: Now includes msg.sender (admin)
         emit AccountClosed(pensioner, msg.sender, block.timestamp);
     }
 
@@ -671,7 +704,8 @@ contract PensionRegistry {
         p.nomineeReviewedAt = block.timestamp;
         p.nomineeRejectReason = "";
 
-        emit NomineeClaimApproved(pensioner, p.nomineeWallet, block.timestamp);
+        // ✅ UPDATED: Now includes msg.sender (admin)
+        emit NomineeClaimApproved(pensioner, p.nomineeWallet, msg.sender, block.timestamp);
     }
 
     function rejectNomineeClaim(address pensioner, string calldata reason) external onlyAdmin {
@@ -687,7 +721,8 @@ contract PensionRegistry {
         p.nomineeReviewedAt = block.timestamp;
         p.nomineeRejectReason = reason;
 
-        emit NomineeClaimRejected(pensioner, p.nomineeWallet, reason, block.timestamp);
+        // ✅ UPDATED: Now includes msg.sender (admin)
+        emit NomineeClaimRejected(pensioner, p.nomineeWallet, msg.sender, reason, block.timestamp);
     }
 
     /* ============================================================
@@ -742,7 +777,8 @@ contract PensionRegistry {
         p.deceasedAt = block.timestamp;
         p.deathProofCID = p.deathReportProofCID;
 
-        emit DeathReportVerified(pensioner, p.nomineeWallet, block.timestamp);
+        // ✅ UPDATED: Now includes msg.sender (admin)
+        emit DeathReportVerified(pensioner, p.nomineeWallet, msg.sender, block.timestamp);
     }
 
     // Keep your original version too (optional)
@@ -764,7 +800,8 @@ contract PensionRegistry {
         p.deceasedAt = block.timestamp;
         p.deathProofCID = proofCID;
 
-        emit DeathReportVerified(pensioner, p.nomineeWallet, block.timestamp);
+        // ✅ UPDATED: Now includes msg.sender (admin)
+        emit DeathReportVerified(pensioner, p.nomineeWallet, msg.sender, block.timestamp);
     }
 
     function rejectDeathReport(address pensioner, string calldata reason) external onlyAdmin {
@@ -780,7 +817,8 @@ contract PensionRegistry {
         p.deathReviewedAt = block.timestamp;
         p.deathReportRejectReason = reason;
 
-        emit DeathReportRejected(pensioner, p.nomineeWallet, reason, block.timestamp);
+        // ✅ UPDATED: Now includes msg.sender (admin)
+        emit DeathReportRejected(pensioner, p.nomineeWallet, msg.sender, reason, block.timestamp);
     }
 
     /* ===================== REQUIRED FOR DOCUMENTS CONTRACT ===================== */
