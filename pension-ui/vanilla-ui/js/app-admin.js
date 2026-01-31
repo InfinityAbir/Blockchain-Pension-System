@@ -1021,7 +1021,7 @@ async function loadAdminHistory() {
       }
     }
 
-    // ✅ UPDATED: Now captures admin parameter (args[2])
+    // ✅ UPDATED: Now captures admin parameter (args[1])
     await safeLoadEvent(registry, "PensionerApproved", "Pensioner Approved", {
       filterArgs: [null, null],
       parse: (log) => ({
@@ -1144,6 +1144,18 @@ async function loadAdminHistory() {
     if (!logsAll.length) {
       setEmptyTable(adminHistoryTable, "No admin history found yet.", 7);
       return;
+    }
+
+    // ✅ Fetch nominee addresses for events that don't have them
+    for (const log of logsAll) {
+      if (log.nominee === "—" && log.pensioner !== "—") {
+        try {
+          const p = await registry.getPensioner(log.pensioner);
+          log.nominee = p.nomineeWallet || "—";
+        } catch (e) {
+          console.warn("Failed to fetch nominee for", log.pensioner, e);
+        }
+      }
     }
 
     adminHistoryTable.innerHTML = logsAll
