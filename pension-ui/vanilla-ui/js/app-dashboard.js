@@ -39,6 +39,8 @@ const accountClosureNotice = document.getElementById("accountClosureNotice");
 const accountClosureNoticeText = document.getElementById(
   "accountClosureNoticeText",
 );
+/* Account Settings Box */
+const accountSettingsBox = document.getElementById("accountSettingsBox");
 
 /* ✅ GPS Gratuity */
 const gpsGratuityBox = document.getElementById("gpsGratuityBox");
@@ -581,9 +583,11 @@ function renderAccountStatusUI(accountStatus) {
   } else if (st === ACCOUNT_STATUS.CLOSURE_REQUESTED) {
     accountClosureNotice.classList.remove("d-none");
     accountClosureNoticeText.innerHTML = `
-      Your account closure request is <b>pending admin review</b>.
+      This account has completed <b>final settlement</b>.
       <br/>
-      Dashboard actions are temporarily locked until admin decision.
+      It is now <b>pending admin closure review</b>.
+      <br/>
+      All pension actions are locked.
     `;
   } else if (st === ACCOUNT_STATUS.CLOSED) {
     accountClosureNotice.classList.remove("d-none");
@@ -598,14 +602,12 @@ function renderAccountStatusUI(accountStatus) {
       "Account status could not be determined.";
   }
 
+  // ✅ Hide closure button unless account is ACTIVE
   if (btnRequestClosure) {
-    btnRequestClosure.disabled = st !== ACCOUNT_STATUS.ACTIVE;
-    btnRequestClosure.title =
-      st === ACCOUNT_STATUS.ACTIVE
-        ? ""
-        : "Closure request already submitted or account closed.";
+    btnRequestClosure.classList.toggle("d-none", st !== ACCOUNT_STATUS.ACTIVE);
   }
 
+  // ✅ Lock all actions when not ACTIVE
   if (st !== ACCOUNT_STATUS.ACTIVE) {
     disableAllActions("Account is not active.");
   }
@@ -645,6 +647,13 @@ async function loadDashboard() {
       await safeRead(() => registry.getProgram(account), 1),
     );
     const isGPS = currentProgram === PROGRAM.GPS;
+    /* ===================== ACCOUNT CLOSURE VISIBILITY ===================== */
+    // Rule:
+    // - PRSS pensioner → can request closure
+    // - GPS pensioner → NO closure option
+    if (accountSettingsBox) {
+      accountSettingsBox.classList.toggle("d-none", isGPS);
+    }
 
     if (programTextEl) {
       programTextEl.textContent = `Program: ${programName(currentProgram)}`;
