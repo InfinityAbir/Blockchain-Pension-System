@@ -17,6 +17,8 @@ interface IPensionDocuments {
 contract PensionRegistry {
     /* ===================== ROLES ===================== */
     address public admin;
+    // ✅ Authorized system contract
+    address public disbursementContract;
 
     modifier onlyAdmin() {
         require(msg.sender == admin, "Only admin allowed");
@@ -617,6 +619,23 @@ contract PensionRegistry {
 
         emit AccountClosureRequested(msg.sender, reason, block.timestamp);
     }
+
+        // 🔒 System-triggered closure (used after full settlement)
+    function _forceClosureRequest(address pensioner, string memory reason) external {
+        require(msg.sender == disbursementContract, "Only disbursement allowed");
+
+        Pensioner storage p = pensioners[pensioner];
+        require(p.wallet == pensioner, "Not registered");
+
+        if (p.accountStatus == AccountStatus.ACTIVE) {
+            p.accountStatus = AccountStatus.CLOSURE_REQUESTED;
+            p.closureRequestedAt = block.timestamp;
+            p.closureReason = reason;
+
+            emit AccountClosureRequested(pensioner, reason, block.timestamp);
+        }
+    }
+
 
     // Admin confirms closure
     function closeAccount(address pensioner) external onlyAdmin {
