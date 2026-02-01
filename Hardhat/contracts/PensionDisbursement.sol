@@ -370,6 +370,12 @@ contract PensionDisbursement {
 
         emit FullPensionWithdrawn(msg.sender, total, block.timestamp);
         emit PensionModeChosen(msg.sender, PensionMode.LumpSum);
+
+        // 🔒 mandatory closure (always last)
+        registry._forceClosureRequest(
+            msg.sender,
+            "Final PRSS settlement completed"
+        );
     }
 
     // =========================
@@ -410,9 +416,14 @@ contract PensionDisbursement {
         lumpSumWithdrawn[pensioner] = true;
 
         fund.releasePRSSLumpSum(pensioner, payable(msg.sender), total);
-
-        emit FullNomineePensionWithdrawn(pensioner, msg.sender, total, block.timestamp);
+      emit FullNomineePensionWithdrawn(pensioner, msg.sender, total, block.timestamp);
         emit PensionModeChosen(pensioner, PensionMode.LumpSum);
+
+        // 🔒 mandatory closure (always last)
+        registry._forceClosureRequest(
+            pensioner,
+            "Final PRSS nominee settlement completed"
+        );
     }
 
     // =========================
