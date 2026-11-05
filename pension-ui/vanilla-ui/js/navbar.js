@@ -53,43 +53,69 @@ export async function loadNavbar() {
       roleText.textContent = "Admin Panel";
 
       navLinks.innerHTML = `
-    ${divider("Admin")}
-    <a class="bp-link" href="#" data-admin-tab="pending">
-      <span class="bp-icon">🟡</span>
-      <span>Pending Applications</span>
-    </a>
+  ${divider("Admin")}
 
-    <a class="bp-link" href="#" data-admin-tab="all">
-      <span class="bp-icon">📋</span>
-      <span>All Pensioners</span>
-    </a>
+  <a class="bp-link" href="#" data-admin-tab="pending">
+    <span class="bp-icon">🟡</span>
+    <span>Pending Applications</span>
+  </a>
 
-    <a class="bp-link" href="#" data-admin-tab="deathReports">
-      <span class="bp-icon">🪦</span>
-      <span>Death Reports</span>
-    </a>
+  <a class="bp-link" href="#" data-admin-tab="all">
+    <span class="bp-icon">📋</span>
+    <span>All Pensioners</span>
+  </a>
 
-    <a class="bp-link" href="#" data-admin-tab="deceased">
-      <span class="bp-icon">⚫</span>
-      <span>Deceased & Claims</span>
-    </a>
-  `;
+  <a class="bp-link" href="#" data-admin-tab="deathReports">
+    <span class="bp-icon">🪦</span>
+    <span>Death Reports</span>
+  </a>
+
+  <a class="bp-link" href="#" data-admin-tab="deceased">
+    <span class="bp-icon">⚫</span>
+    <span>Deceased & Claims</span>
+  </a>
+
+  <a class="bp-link" href="#" data-admin-tab="closure">
+    <span class="bp-icon">🧾</span>
+    <span>Closure Requests</span>
+  </a>
+
+  <a class="bp-link" href="#" data-admin-tab="gpsFund">
+    <span class="bp-icon">🏦</span>
+    <span>GPS Fund</span>
+  </a>
+
+  <a class="bp-link" href="#" data-admin-tab="policy">
+    <span class="bp-icon">⚙️</span>
+    <span>Policy Settings</span>
+  </a>
+
+  <a class="bp-link" href="#" data-admin-tab="history">
+    <span class="bp-icon">🕒</span>
+    <span>History</span>
+  </a>
+`;
 
       // ✅ make sidebar buttons switch tabs on admin.html
       setTimeout(() => {
         document.querySelectorAll("[data-admin-tab]").forEach((a) => {
           a.addEventListener("click", (e) => {
             e.preventDefault();
-
             const tab = a.dataset.adminTab;
 
-            if (tab === "pending")
-              document.getElementById("tabPending")?.click();
-            if (tab === "all") document.getElementById("tabAll")?.click();
-            if (tab === "deathReports")
-              document.getElementById("tabDeathReports")?.click();
-            if (tab === "deceased")
-              document.getElementById("tabDeceased")?.click();
+            const map = {
+              pending: "tabPending",
+              all: "tabAll",
+              deathReports: "tabDeathReports",
+              deceased: "tabDeceased",
+              closure: "tabClosureRequests",
+              gpsFund: "tabGpsFund",
+              policy: "tabPolicy",
+              history: "tabHistory",
+            };
+
+            const btn = document.getElementById(map[tab]);
+            btn?.click();
           });
         });
       }, 200);

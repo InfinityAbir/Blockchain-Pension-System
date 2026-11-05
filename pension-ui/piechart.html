@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Gas Usage Distribution</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.2.0/chartjs-plugin-datalabels.min.js"></script>
+  </head>
+  <body
+    style="
+      margin: 0;
+      background: #fff;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      font-family: &quot;Times New Roman&quot;, Times, serif;
+    "
+  >
+    <div
+      style="
+        background: #fff;
+        padding: 2rem 2rem 1.5rem;
+        max-width: 760px;
+        width: 100%;
+      "
+    >
+      <h2
+        style="
+          text-align: center;
+          font-size: 16px;
+          font-weight: 700;
+          color: #111;
+          margin: 0 0 1.5rem;
+          letter-spacing: 0.01em;
+        "
+      >
+        Gas Usage Distribution of Smart Contract Functions
+      </h2>
+
+      <div
+        style="
+          display: flex;
+          flex-wrap: wrap;
+          gap: 2.5rem;
+          align-items: center;
+          justify-content: center;
+        "
+      >
+        <div
+          style="
+            position: relative;
+            width: 360px;
+            height: 360px;
+            flex-shrink: 0;
+          "
+        >
+          <canvas id="pieChart"></canvas>
+        </div>
+
+        <div
+          id="legend"
+          style="
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            font-size: 13px;
+            color: #111;
+          "
+        ></div>
+      </div>
+    </div>
+  </body>
+</html>

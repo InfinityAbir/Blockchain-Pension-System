@@ -72,6 +72,10 @@
               🏦 GPS Fund
             </button>
 
+            <button id="tabPolicy" class="btn btn-outline-soft btn-sm">
+              ⚙️ Policy Settings
+            </button>
+
             <button id="tabHistory" class="btn btn-outline-soft btn-sm">
               🕒 History
             </button>
@@ -245,7 +249,77 @@
               </table>
             </div>
           </div>
+          <!-- ✅ Policy Settings Section -->
+          <section id="policySection" class="soft-card p-4 d-none mt-3">
+            <div class="fw-bold mb-2">Pension Policy Settings</div>
+            <div class="small text-secondary mb-3">
+              Configure pension calculation rules dynamically without
+              redeploying contracts.
+            </div>
 
+            <!-- PRSS -->
+            <div class="soft-card p-3 mb-3">
+              <h6 class="fw-bold mb-2">PRSS Policy</h6>
+
+              <label class="form-label small">Scheme</label>
+              <select id="prssScheme" class="form-select form-select-sm mb-2">
+                <option value="0">DPS</option>
+                <option value="1">MIS</option>
+              </select>
+
+              <label class="form-label small">Multiplier (%)</label>
+              <input
+                id="prssMultiplier"
+                type="number"
+                class="form-control input-soft mb-2"
+              />
+
+              <label class="form-label small">Payout Months</label>
+              <input
+                id="prssPayoutMonths"
+                type="number"
+                class="form-control input-soft mb-2"
+              />
+
+              <button
+                id="btnSavePrssPolicy"
+                class="btn btn-primary-soft btn-sm"
+              >
+                Save PRSS Policy
+              </button>
+            </div>
+
+            <!-- GPS -->
+            <div class="soft-card p-3">
+              <h6 class="fw-bold mb-2">GPS Policy</h6>
+
+              <label class="form-label small">Retirement Age</label>
+              <input
+                id="gpsRetirementAge"
+                type="number"
+                class="form-control input-soft mb-2"
+              />
+
+              <label class="form-label small">Gratuity Multiplier (%)</label>
+              <input
+                id="gpsGratuityMultiplier"
+                type="number"
+                class="form-control input-soft mb-2"
+              />
+              <label class="form-label small">Recommended Pension Months</label>
+              <input
+                id="gpsRecommendedMonths"
+                type="number"
+                min="3"
+                max="36"
+                class="form-control input-soft mb-2"
+              />
+
+              <button id="btnSaveGpsPolicy" class="btn btn-primary-soft btn-sm">
+                Save GPS Policy
+              </button>
+            </div>
+          </section>
           <!-- History Section -->
           <div id="historySection" class="soft-card p-4 d-none mt-3">
             <div class="d-flex justify-content-between align-items-center mb-2">

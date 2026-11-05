@@ -54,6 +54,20 @@ const tabGpsFund = document.getElementById("tabGpsFund");
 
 // ✅ NEW
 const tabClosureRequests = document.getElementById("tabClosureRequests");
+const tabPolicy = document.getElementById("tabPolicy");
+const policySection = document.getElementById("policySection");
+
+/* ===================== POLICY DOM ===================== */
+const prssSchemeSelect = document.getElementById("prssScheme");
+const prssMultiplierInput = document.getElementById("prssMultiplier");
+const prssPayoutMonthsInput = document.getElementById("prssPayoutMonths");
+const btnSavePrssPolicy = document.getElementById("btnSavePrssPolicy");
+
+const gpsRetirementAgeInput = document.getElementById("gpsRetirementAge");
+const gpsGratuityMultiplierInput = document.getElementById(
+  "gpsGratuityMultiplier",
+);
+const btnSaveGpsPolicy = document.getElementById("btnSaveGpsPolicy");
 
 /* ===================== MODAL ===================== */
 const modalEl = document.getElementById("reviewModal");
@@ -159,6 +173,7 @@ function setActiveTab(activeId) {
 
     { id: "gpsFund", btn: tabGpsFund, sec: gpsFundSection },
     { id: "history", btn: tabHistory, sec: historySection },
+    { id: "policy", btn: tabPolicy, sec: policySection },
   ];
 
   tabs.forEach((t) => {
@@ -287,17 +302,6 @@ function bdtToWei(bdtNumber) {
     return 0n;
   }
 }
-
-function gpsPercentByYears(serviceYears) {
-  const y = Number(serviceYears || 0);
-  if (y >= 25) return 80;
-  if (y >= 20) return 64;
-  if (y >= 15) return 48;
-  if (y >= 10) return 32;
-  return 0;
-}
-
-const RECOMMENDED_MONTHS = 12;
 
 /* ===================== CONTRACT DOC LOADERS ===================== */
 async function getPensionerDocsList(pensionerWallet) {
@@ -747,7 +751,11 @@ async function loadGpsFundManagement() {
 
     const registry = await getRegistryContract(true);
     const fund = await getFundContract(true);
+    const disbursement = await getDisbursementContract(true);
 
+    // 🔹 dynamic GPS policy
+    const gratuityMultiplier = Number(await registry.gpsGratuityMultiplier());
+    const recommendedMonths = Number(await registry.gpsRecommendedMonths());
     const all = await registry.getApplicants();
 
     const gpsApproved = [];
@@ -766,7 +774,12 @@ async function loadGpsFundManagement() {
       return;
     }
 
+    // -------------------------------
+    // Load allocation & payment logs
+    // -------------------------------
     let allocLogs = [];
+    let paidLogs = [];
+
     try {
       if (fund.filters?.GPSFundAllocated) {
         allocLogs = await fund.queryFilter(
@@ -777,10 +790,8 @@ async function loadGpsFundManagement() {
       }
     } catch (e) {
       console.warn("GPSFundAllocated query failed:", e);
-      allocLogs = [];
     }
 
-    let paidLogs = [];
     try {
       if (fund.filters?.PensionPaid) {
         paidLogs = await fund.queryFilter(
@@ -791,7 +802,6 @@ async function loadGpsFundManagement() {
       }
     } catch (e) {
       console.warn("PensionPaid query failed:", e);
-      paidLogs = [];
     }
 
     const totalAllocatedMap = {};
@@ -802,7 +812,7 @@ async function loadGpsFundManagement() {
       const amount = log?.args?.amount ?? log?.args?.[1] ?? 0n;
       if (!pensioner) continue;
 
-      const key = String(pensioner).toLowerCase();
+      const key = pensioner.toLowerCase();
       totalAllocatedMap[key] = (totalAllocatedMap[key] || 0n) + BigInt(amount);
     }
 
@@ -811,37 +821,45 @@ async function loadGpsFundManagement() {
       const amount = log?.args?.amount ?? log?.args?.[1] ?? 0n;
       if (!receiver) continue;
 
-      const key = String(receiver).toLowerCase();
+      const key = receiver.toLowerCase();
       totalPaidMap[key] = (totalPaidMap[key] || 0n) + BigInt(amount);
     }
 
     gpsFundTable.innerHTML = "";
 
+    // -------------------------------
+    // Render table rows
+    // -------------------------------
     for (let i = 0; i < gpsApproved.length; i++) {
       const addr = gpsApproved[i];
 
       const remainingWei = await fund.gpsAllocatedFund(addr);
-
-      const allocWei = totalAllocatedMap[String(addr).toLowerCase()] || 0n;
-      const paidWei = totalPaidMap[String(addr).toLowerCase()] || 0n;
+      const allocWei = totalAllocatedMap[addr.toLowerCase()] || 0n;
+      const paidWei = totalPaidMap[addr.toLowerCase()] || 0n;
 
       const p = await registry.getPensioner(addr);
 
       const verifiedSalaryBDT = Number(p.verifiedBasicSalaryBDT || 0);
       const verifiedYears = Number(p.verifiedServiceYears || 0);
 
-      const percent = gpsPercentByYears(verifiedYears);
-      const monthlyPensionBDT = Math.floor((verifiedSalaryBDT * percent) / 100);
-      const monthlyPensionWei = bdtToWei(monthlyPensionBDT);
+      // 🔹 Monthly pension (from Disbursement contract, single source of truth)
+      const pensionState = await disbursement.getPensionState(addr);
+      const monthlyPensionWei = BigInt(pensionState.monthlyAmount || 0);
 
-      const gratuityBDT = Math.floor(verifiedSalaryBDT * verifiedYears);
+      // 🔹 Gratuity (admin-defined multiplier)
+      const gratuityBDT = Math.floor(
+        (verifiedSalaryBDT * verifiedYears * gratuityMultiplier) / 100,
+      );
       const gratuityWei = bdtToWei(gratuityBDT);
 
+      // 🔹 Recommended fund
       const recommendedWei =
-        gratuityWei + monthlyPensionWei * BigInt(RECOMMENDED_MONTHS);
+        gratuityWei + monthlyPensionWei * BigInt(recommendedMonths);
 
       let needWei = 0n;
-      if (recommendedWei > allocWei) needWei = recommendedWei - allocWei;
+      if (recommendedWei > allocWei) {
+        needWei = recommendedWei - allocWei;
+      }
 
       const tr = document.createElement("tr");
 
@@ -863,11 +881,13 @@ async function loadGpsFundManagement() {
         <td class="fw-semibold">${formatEth(paidWei)}</td>
         <td class="fw-semibold">${formatEth(remainingWei)}</td>
 
-        <td class="fw-semibold">${
-          needWei > 0n
-            ? `<span style="color:#b45309;">${formatEth(needWei)}</span>`
-            : `<span style="color:#16a34a;">0.0000 ETH</span>`
-        }</td>
+        <td class="fw-semibold">
+          ${
+            needWei > 0n
+              ? `<span style="color:#b45309;">${formatEth(needWei)}</span>`
+              : `<span style="color:#16a34a;">0.0000 ETH</span>`
+          }
+        </td>
 
         <td>
           <div class="d-flex gap-2 flex-wrap">
@@ -893,16 +913,18 @@ async function loadGpsFundManagement() {
             </button>
           </div>
           <div class="small text-secondary mt-1">
-            Recommended: gratuity + ${RECOMMENDED_MONTHS} months pension
+            Recommended: gratuity + ${recommendedMonths} months pension
           </div>
         </td>
       `;
 
       gpsFundTable.appendChild(tr);
-
       tr.dataset.needWei = String(needWei);
     }
 
+    // -------------------------------
+    // Button bindings
+    // -------------------------------
     document.querySelectorAll("[data-alloc]").forEach((btn) => {
       btn.addEventListener("click", async () => {
         const pensioner = btn.dataset.alloc;
@@ -942,6 +964,34 @@ async function loadGpsFundManagement() {
     console.error(err);
     toast(extractNiceError(err), "error");
     setEmptyTable(gpsFundTable, "Failed to load GPS Fund dashboard.", 11);
+  }
+}
+
+async function loadPolicySettings() {
+  try {
+    const registry = await getRegistryContract(true);
+
+    // PRSS (default scheme = 0)
+    const scheme = Number(document.getElementById("prssScheme")?.value || 0);
+
+    document.getElementById("gpsRecommendedMonths").value =
+      await registry.gpsRecommendedMonths();
+
+    document.getElementById("prssMultiplier").value =
+      await registry.prssSchemeMultiplier(scheme);
+
+    document.getElementById("prssPayoutMonths").value =
+      await registry.prssPayoutMonths(scheme);
+
+    // GPS
+    document.getElementById("gpsRetirementAge").value =
+      await registry.gpsRetirementAge();
+
+    document.getElementById("gpsGratuityMultiplier").value =
+      await registry.gpsGratuityMultiplier();
+  } catch (err) {
+    console.error(err);
+    toast("Failed to load policy settings", "error");
   }
 }
 
@@ -1021,23 +1071,58 @@ async function loadAdminHistory() {
       }
     }
 
+    // ✅ UPDATED: Now captures admin parameter (args[1])
+    await safeLoadEvent(registry, "PensionerApproved", "Pensioner Approved", {
+      filterArgs: [null, null],
+      parse: (log) => ({
+        pensioner: log?.args?.user ?? log?.args?.[0],
+        nominee: "—",
+        admin: log?.args?.admin ?? log?.args?.[1] ?? "—",
+        timestamp: log?.args?.reviewedAt ?? log?.args?.[2],
+      }),
+    });
+
+    // ✅ UPDATED: Now captures admin parameter (args[1])
+    await safeLoadEvent(registry, "PensionerRejected", "Pensioner Rejected", {
+      filterArgs: [null, null, null],
+      parse: (log) => ({
+        pensioner: log?.args?.user ?? log?.args?.[0],
+        nominee: "—",
+        admin: log?.args?.admin ?? log?.args?.[1] ?? "—",
+        timestamp: log?.args?.reviewedAt ?? log?.args?.[3],
+      }),
+    });
+
+    // ✅ UPDATED: Now captures admin parameter (args[1])
+    await safeLoadEvent(registry, "GPSDataVerified", "GPS Data Verified", {
+      filterArgs: [null, null],
+      parse: (log) => ({
+        pensioner: log?.args?.pensioner ?? log?.args?.[0],
+        nominee: "—",
+        admin: log?.args?.admin ?? log?.args?.[1] ?? "—",
+        timestamp: log?.args?.timestamp ?? log?.args?.[5],
+      }),
+    });
+
+    // ✅ UPDATED: Now captures admin parameter (args[2])
     await safeLoadEvent(registry, "DeathReportVerified", "Death Verified", {
       filterArgs: [null, null, null],
       parse: (log) => ({
         pensioner: log?.args?.pensioner ?? log?.args?.[0],
         nominee: log?.args?.nominee ?? log?.args?.[1],
-        admin: "—",
-        timestamp: log?.args?.timestamp ?? log?.args?.[2],
+        admin: log?.args?.admin ?? log?.args?.[2] ?? "—",
+        timestamp: log?.args?.timestamp ?? log?.args?.[3],
       }),
     });
 
+    // ✅ UPDATED: Now captures admin parameter (args[2])
     await safeLoadEvent(registry, "DeathReportRejected", "Death Rejected", {
       filterArgs: [null, null, null, null],
       parse: (log) => ({
         pensioner: log?.args?.pensioner ?? log?.args?.[0],
         nominee: log?.args?.nominee ?? log?.args?.[1],
-        admin: "—",
-        timestamp: log?.args?.timestamp ?? log?.args?.[3],
+        admin: log?.args?.admin ?? log?.args?.[2] ?? "—",
+        timestamp: log?.args?.timestamp ?? log?.args?.[4],
       }),
     });
 
@@ -1051,23 +1136,36 @@ async function loadAdminHistory() {
       }),
     });
 
+    // ✅ UPDATED: Now captures admin parameter (args[2])
     await safeLoadEvent(registry, "NomineeClaimApproved", "Claim Approved", {
       filterArgs: [null, null, null],
       parse: (log) => ({
         pensioner: log?.args?.pensioner ?? log?.args?.[0],
         nominee: log?.args?.nominee ?? log?.args?.[1],
-        admin: "—",
-        timestamp: log?.args?.timestamp ?? log?.args?.[2],
+        admin: log?.args?.admin ?? log?.args?.[2] ?? "—",
+        timestamp: log?.args?.timestamp ?? log?.args?.[3],
       }),
     });
 
+    // ✅ UPDATED: Now captures admin parameter (args[2])
     await safeLoadEvent(registry, "NomineeClaimRejected", "Claim Rejected", {
       filterArgs: [null, null, null, null],
       parse: (log) => ({
         pensioner: log?.args?.pensioner ?? log?.args?.[0],
         nominee: log?.args?.nominee ?? log?.args?.[1],
-        admin: "—",
-        timestamp: log?.args?.timestamp ?? log?.args?.[3],
+        admin: log?.args?.admin ?? log?.args?.[2] ?? "—",
+        timestamp: log?.args?.timestamp ?? log?.args?.[4],
+      }),
+    });
+
+    // ✅ UPDATED: Now captures admin parameter (args[1])
+    await safeLoadEvent(registry, "AccountClosed", "Account Closed", {
+      filterArgs: [null, null],
+      parse: (log) => ({
+        pensioner: log?.args?.pensioner ?? log?.args?.[0],
+        nominee: "—",
+        admin: log?.args?.admin ?? log?.args?.[1] ?? "—",
+        timestamp: log?.args?.timestamp ?? log?.args?.[2],
       }),
     });
 
@@ -1096,6 +1194,18 @@ async function loadAdminHistory() {
     if (!logsAll.length) {
       setEmptyTable(adminHistoryTable, "No admin history found yet.", 7);
       return;
+    }
+
+    // ✅ Fetch nominee addresses for events that don't have them
+    for (const log of logsAll) {
+      if (log.nominee === "—" && log.pensioner !== "—") {
+        try {
+          const p = await registry.getPensioner(log.pensioner);
+          log.nominee = p.nomineeWallet || "—";
+        } catch (e) {
+          console.warn("Failed to fetch nominee for", log.pensioner, e);
+        }
+      }
     }
 
     adminHistoryTable.innerHTML = logsAll
@@ -1836,6 +1946,77 @@ function bindModalActionsOnce() {
     }
   });
 }
+/* ===================== POLICY SAVE ===================== */
+
+// PRSS Save
+btnSavePrssPolicy?.addEventListener("click", async () => {
+  try {
+    const scheme = Number(prssSchemeSelect.value);
+    const multiplier = Number(prssMultiplierInput.value);
+    const payoutMonths = Number(prssPayoutMonthsInput.value);
+
+    if (!multiplier || multiplier <= 0) {
+      toast("PRSS multiplier must be greater than 0", "error");
+      return;
+    }
+
+    if (!payoutMonths || payoutMonths <= 0) {
+      toast("PRSS payout months must be greater than 0", "error");
+      return;
+    }
+
+    toast("Saving PRSS policy...", "info");
+
+    const registry = await getRegistryContract(false);
+
+    await (await registry.setPRSSSchemeMultiplier(scheme, multiplier)).wait();
+    await (await registry.setPRSSPayoutMonths(scheme, payoutMonths)).wait();
+
+    toast("PRSS policy updated ✔", "success");
+  } catch (err) {
+    console.error(err);
+    toast(extractNiceError(err), "error");
+  }
+});
+
+// GPS Save
+btnSaveGpsPolicy?.addEventListener("click", async () => {
+  try {
+    const retirementAge = Number(gpsRetirementAgeInput.value);
+    const gratuityMultiplier = Number(gpsGratuityMultiplierInput.value);
+    const recommendedMonths = Number(
+      document.getElementById("gpsRecommendedMonths")?.value,
+    );
+
+    if (!retirementAge || retirementAge <= 0) {
+      toast("Retirement age must be valid", "error");
+      return;
+    }
+
+    if (!gratuityMultiplier || gratuityMultiplier <= 0) {
+      toast("Gratuity multiplier must be greater than 0", "error");
+      return;
+    }
+
+    if (!recommendedMonths || recommendedMonths < 3 || recommendedMonths > 36) {
+      toast("Recommended months must be between 3 and 36", "error");
+      return;
+    }
+
+    toast("Saving GPS policy...", "info");
+
+    const registry = await getRegistryContract(false);
+
+    await (await registry.setGPSRetirementAge(retirementAge)).wait();
+    await (await registry.setGPSGratuityMultiplier(gratuityMultiplier)).wait();
+    await (await registry.setGPSRecommendedMonths(recommendedMonths)).wait();
+
+    toast("GPS policy updated ✔", "success");
+  } catch (err) {
+    console.error(err);
+    toast(extractNiceError(err), "error");
+  }
+});
 
 /* ===================== EVENTS ===================== */
 btnRefresh?.addEventListener("click", async () => {
@@ -1864,6 +2045,10 @@ tabPending?.addEventListener("click", async () => {
 tabAll?.addEventListener("click", async () => {
   setActiveTab("all");
   await loadAllPensioners();
+});
+tabPolicy?.addEventListener("click", async () => {
+  setActiveTab("policy");
+  await loadPolicySettings();
 });
 
 tabDeathReports?.addEventListener("click", async () => {

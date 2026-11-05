@@ -1,0 +1,66 @@
+[
+  {
+    "label": "deploy PensionRegistry",
+    "gas": "5663233",
+    "gwei": "1.052",
+    "block": 11348973,
+    "hash": "0x21b4367582fc0dde9b6ed2990cbcd317bf9755bf31e1da223e4e345f56156861",
+    "secs": "12.8"
+  },
+  {
+    "label": "deploy PensionDocuments",
+    "gas": "2586452",
+    "gwei": "1.063",
+    "block": 11348974,
+    "hash": "0x48398fc0ed6b67bec5ad69796698ff41b34dbba06087b33c92956f2ebe1872b3",
+    "secs": "10.4"
+  },
+  {
+    "label": "deploy PensionFund",
+    "gas": "1746653",
+    "gwei": "1.108",
+    "block": 11348975,
+    "hash": "0xe23607e62713dd22ea9e3f96e65ef557d74743285e6b4c1d22856d8dc731b665",
+    "secs": "10.3"
+  },
+  {
+    "label": "deploy PensionDisbursement",
+    "gas": "3088668",
+    "gwei": "1.211",
+    "block": 11348976,
+    "hash": "0x10148b5d920a0eb14bb391da789ab39d094ebe1047f33b22694cd85afdcfd69b",
+    "secs": "10.6"
+  },
+  {
+    "label": "wire setDocuments",
+    "gas": "47703",
+    "gwei": "1.120",
+    "block": 11348977,
+    "hash": "0x2df14380d46ed631dbbebdc8f0ef95f608e46e9ae6c03383669a1731acfeca04",
+    "secs": "14.5"
+  },
+  {
+    "label": "wire setDisbursement",
+    "gas": "52883",
+    "gwei": "1.054",
+    "block": 11348978,
+    "hash": "0xa904a9051ca0981b79b494252a160a692a4cf595c6a5ba33df4e67e539a679ed",
+    "secs": "10.2"
+  },
+  {
+    "label": "wire setDisbursementContract",
+    "gas": "46604",
+    "gwei": "1.080",
+    "block": 11348979,
+    "hash": "0x23c16e7143621115cc4f726aa25412bdb45a7de68545bf1eb428a469a5f83dcb",
+    "secs": "14.1"
+  },
+  {
+    "label": "registerPensioner",
+    "gas": "368105",
+    "gwei": "0.973",
+    "block": 11348980,
+    "hash": "0x885537887a9dd581dfb83ec321a5ae8e1b5af5a28f5bb257aa20d14126523f56",
+    "secs": "10.6"
+  }
+]

@@ -14,9 +14,13 @@ interface IPensionDocuments {
         returns (bool);
 }
 
+
+
 contract PensionRegistry {
     /* ===================== ROLES ===================== */
     address public admin;
+    // ✅ Authorized system contract
+    address public disbursementContract;
 
     modifier onlyAdmin() {
         require(msg.sender == admin, "Only admin allowed");
@@ -145,6 +149,43 @@ contract PensionRegistry {
 
     IPensionDocuments public documents;
 
+    /* =========================================================
+    🔹 DYNAMIC POLICY CONFIGURATION
+========================================================= */
+    // ---------- PRSS ----------
+    mapping(SchemeType => uint256) public prssSchemeMultiplier; // 105 = 105%
+    mapping(SchemeType => uint256) public prssPayoutMonths;
+
+    // ---------- GPS ----------
+    uint256 public gpsRetirementAge;
+    uint256 public gpsRecommendedMonths;
+
+    // minimum years => pension percentage
+    uint256[] private gpsServiceYearThresholds;
+    mapping(uint256 => uint256) public gpsPensionPercentByMinYears;
+
+    // gratuity multiplier (100 = 1x, 150 = 1.5x)
+    uint256 public gpsGratuityMultiplier;
+
+    // ---------- EVENTS ----------
+    event PRSSSchemeMultiplierUpdated(
+        SchemeType scheme,
+        uint256 multiplier,
+        uint256 timestamp
+    );
+
+    event PRSSPayoutMonthsUpdated(
+        SchemeType scheme,
+        uint256 months,
+        uint256 timestamp
+    );
+
+    event GPSRetirementAgeUpdated(uint256 newAge, uint256 timestamp);
+    event GPSPensionBandUpdated(uint256 minYears, uint256 percent, uint256 timestamp);
+    event GPSGratuityMultiplierUpdated(uint256 multiplier, uint256 timestamp);
+    event GPSRecommendedMonthsUpdated(uint256 months, uint256 timestamp);
+
+
     /* ===================== EVENTS ===================== */
     event PensionerRegistered(
         address indexed user,
@@ -158,13 +199,27 @@ contract PensionRegistry {
         uint256 appliedAt
     );
 
-    event PensionerApproved(address indexed user, uint256 reviewedAt);
-    event PensionerRejected(address indexed user, string reason, uint256 reviewedAt);
+    // ✅ UPDATED: Added indexed admin parameter
+    event PensionerApproved(
+        address indexed user,
+        address indexed admin,
+        uint256 reviewedAt
+    );
+
+    // ✅ UPDATED: Added indexed admin parameter
+    event PensionerRejected(
+        address indexed user,
+        address indexed admin,
+        string reason,
+        uint256 reviewedAt
+    );
 
     event DocumentsContractUpdated(address indexed documentsAddress);
 
+    // ✅ UPDATED: Added indexed admin parameter
     event GPSDataVerified(
         address indexed pensioner,
+        address indexed admin,
         uint256 verifiedBasicSalaryBDT,
         uint256 verifiedServiceYears,
         string verifiedEmployeeId,
@@ -180,15 +235,19 @@ contract PensionRegistry {
         uint256 timestamp
     );
 
+    // ✅ UPDATED: Added indexed admin parameter
     event DeathReportVerified(
         address indexed pensioner,
         address indexed nominee,
+        address indexed admin,
         uint256 timestamp
     );
 
+    // ✅ UPDATED: Added indexed admin parameter
     event DeathReportRejected(
         address indexed pensioner,
         address indexed nominee,
+        address indexed admin,
         string reason,
         uint256 timestamp
     );
@@ -201,15 +260,19 @@ contract PensionRegistry {
         uint256 timestamp
     );
 
+    // ✅ UPDATED: Added indexed admin parameter
     event NomineeClaimApproved(
         address indexed pensioner,
         address indexed nominee,
+        address indexed admin,
         uint256 timestamp
     );
 
+    // ✅ UPDATED: Added indexed admin parameter
     event NomineeClaimRejected(
         address indexed pensioner,
         address indexed nominee,
+        address indexed admin,
         string reason,
         uint256 timestamp
     );
@@ -218,7 +281,16 @@ contract PensionRegistry {
 
     // ✅ NEW: Deactivate / closure events
     event AccountClosureRequested(address indexed pensioner, string reason, uint256 timestamp);
-    event AccountClosed(address indexed pensioner, address indexed admin, uint256 timestamp);
+
+    // ✅ UPDATED: Added indexed admin parameter
+    event AccountClosed(
+        address indexed pensioner,
+        address indexed admin,
+        uint256 timestamp
+    );
+    
+    event DisbursementContractUpdated(address indexed newAddress);
+
 
     /* ===================== CONSTRUCTOR ===================== */
     constructor(address documentsAddress) {
@@ -233,6 +305,29 @@ contract PensionRegistry {
         prssMinMonths[SchemeType.RetirementFund] = 24;
         prssMinMonths[SchemeType.ProvidentFund] = 36;
         prssMinMonths[SchemeType.InsurancePension] = 60;
+
+        // ---------- PRSS defaults ----------
+        prssSchemeMultiplier[SchemeType.DPS] = 105;
+        prssSchemeMultiplier[SchemeType.RetirementFund] = 115;
+        prssSchemeMultiplier[SchemeType.ProvidentFund] = 125;
+        prssSchemeMultiplier[SchemeType.InsurancePension] = 135;
+
+        prssPayoutMonths[SchemeType.DPS] = 240;
+        prssPayoutMonths[SchemeType.RetirementFund] = 240;
+        prssPayoutMonths[SchemeType.ProvidentFund] = 240;
+        prssPayoutMonths[SchemeType.InsurancePension] = 240;
+
+        // ---------- GPS defaults ----------
+        gpsRetirementAge = 60;
+        gpsGratuityMultiplier = 100;
+        gpsRecommendedMonths = 12; // admin guidance for GPS fund allocation
+
+        // GPS pension bands (minimum years mapping)
+        _setGPSBand(10, 32);
+        _setGPSBand(15, 48);
+        _setGPSBand(20, 64);
+        _setGPSBand(25, 80);
+
     }
 
     /* ============================================================
@@ -350,6 +445,68 @@ contract PensionRegistry {
 
         emit AdminTransferred(old, newAdmin);
     }
+    function setDisbursementContract(address _addr) external onlyAdmin {
+        require(_addr != address(0), "Invalid address");
+        disbursementContract = _addr;
+    }   
+    function _setGPSBand(uint256 minYears, uint256 percent) internal {
+        if (gpsPensionPercentByMinYears[minYears] == 0) {
+            gpsServiceYearThresholds.push(minYears);
+        }
+        gpsPensionPercentByMinYears[minYears] = percent;
+    }
+
+    function setGPSPensionBand(uint256 minYears, uint256 percent)
+        external
+        onlyAdmin
+    {
+        require(minYears >= 1, "Invalid years");
+        require(percent <= 100, "Invalid percent");
+        _setGPSBand(minYears, percent);
+        emit GPSPensionBandUpdated(minYears, percent, block.timestamp);
+    }
+
+    function setPRSSSchemeMultiplier(SchemeType scheme, uint256 multiplier)
+        external
+        onlyAdmin
+    {
+        require(multiplier >= 100 && multiplier <= 200, "Out of range");
+        prssSchemeMultiplier[scheme] = multiplier;
+        emit PRSSSchemeMultiplierUpdated(scheme, multiplier, block.timestamp);
+    }
+
+    
+
+    function setPRSSPayoutMonths(SchemeType scheme, uint256 months_)
+        external
+        onlyAdmin
+    {
+        require(months_ >= 60 && months_ <= 360, "Invalid months");
+        prssPayoutMonths[scheme] = months_;
+        emit PRSSPayoutMonthsUpdated(scheme, months_, block.timestamp);
+    }
+
+    function setGPSRetirementAge(uint256 age) external onlyAdmin {
+        require(age >= 50 && age <= 70, "Invalid age");
+        gpsRetirementAge = age;
+        emit GPSRetirementAgeUpdated(age, block.timestamp);
+    }
+
+    function setGPSGratuityMultiplier(uint256 multiplier)
+        external
+        onlyAdmin
+    {
+        require(multiplier >= 100 && multiplier <= 300, "Invalid multiplier");
+        gpsGratuityMultiplier = multiplier;
+        emit GPSGratuityMultiplierUpdated(multiplier, block.timestamp);
+    }
+    
+    /* ===================== GPS FUND GUIDANCE ===================== */
+    function setGPSRecommendedMonths(uint256 months) external onlyAdmin {
+        require(months >= 3 && months <= 36, "Invalid range");
+        gpsRecommendedMonths = months;
+        emit GPSRecommendedMonthsUpdated(months, block.timestamp);
+    }
 
     /* ============================================================
         GPS ADMIN VERIFICATION
@@ -379,8 +536,10 @@ contract PensionRegistry {
         p.verifiedServiceYears = verifiedServiceYears;
         p.verifiedEmployeeId = verifiedEmployeeId;
 
+        // ✅ UPDATED: Now includes msg.sender (admin)
         emit GPSDataVerified(
             pensioner,
+            msg.sender,
             verifiedBasicSalaryBDT,
             verifiedServiceYears,
             verifiedEmployeeId,
@@ -549,7 +708,8 @@ contract PensionRegistry {
         pensioners[_user].reviewedAt = block.timestamp;
         pensioners[_user].rejectionReason = "";
 
-        emit PensionerApproved(_user, block.timestamp);
+        // ✅ UPDATED: Now includes msg.sender (admin)
+        emit PensionerApproved(_user, msg.sender, block.timestamp);
     }
 
     function rejectPensioner(address _user, string calldata _reason) external onlyAdmin {
@@ -563,7 +723,8 @@ contract PensionRegistry {
         pensioners[_user].reviewedAt = block.timestamp;
         pensioners[_user].rejectionReason = _reason;
 
-        emit PensionerRejected(_user, _reason, block.timestamp);
+        // ✅ UPDATED: Now includes msg.sender (admin)
+        emit PensionerRejected(_user, msg.sender, _reason, block.timestamp);
     }
 
     /* ============================================================
@@ -586,6 +747,25 @@ contract PensionRegistry {
         emit AccountClosureRequested(msg.sender, reason, block.timestamp);
     }
 
+    // 🔒 System-triggered closure (used after full settlement)
+    function _forceClosureRequest(address pensioner, string memory reason) external {
+    require(disbursementContract != address(0), "Disbursement not configured");
+    require(msg.sender == disbursementContract, "Only disbursement allowed");
+
+    Pensioner storage p = pensioners[pensioner];
+    require(p.wallet == pensioner, "Not registered");
+
+    if (p.accountStatus == AccountStatus.ACTIVE) {
+        p.accountStatus = AccountStatus.CLOSURE_REQUESTED;
+        p.closureRequestedAt = block.timestamp;
+        p.closureReason = reason;
+
+        emit AccountClosureRequested(pensioner, reason, block.timestamp);
+    }
+}
+
+
+
     // Admin confirms closure
     function closeAccount(address pensioner) external onlyAdmin {
         require(pensioner != address(0), "Invalid pensioner");
@@ -605,6 +785,7 @@ contract PensionRegistry {
         p.accountStatus = AccountStatus.CLOSED;
         p.closedAt = block.timestamp;
 
+        // ✅ UPDATED: Now includes msg.sender (admin)
         emit AccountClosed(pensioner, msg.sender, block.timestamp);
     }
 
@@ -671,7 +852,8 @@ contract PensionRegistry {
         p.nomineeReviewedAt = block.timestamp;
         p.nomineeRejectReason = "";
 
-        emit NomineeClaimApproved(pensioner, p.nomineeWallet, block.timestamp);
+        // ✅ UPDATED: Now includes msg.sender (admin)
+        emit NomineeClaimApproved(pensioner, p.nomineeWallet, msg.sender, block.timestamp);
     }
 
     function rejectNomineeClaim(address pensioner, string calldata reason) external onlyAdmin {
@@ -687,7 +869,8 @@ contract PensionRegistry {
         p.nomineeReviewedAt = block.timestamp;
         p.nomineeRejectReason = reason;
 
-        emit NomineeClaimRejected(pensioner, p.nomineeWallet, reason, block.timestamp);
+        // ✅ UPDATED: Now includes msg.sender (admin)
+        emit NomineeClaimRejected(pensioner, p.nomineeWallet, msg.sender, reason, block.timestamp);
     }
 
     /* ============================================================
@@ -742,7 +925,8 @@ contract PensionRegistry {
         p.deceasedAt = block.timestamp;
         p.deathProofCID = p.deathReportProofCID;
 
-        emit DeathReportVerified(pensioner, p.nomineeWallet, block.timestamp);
+        // ✅ UPDATED: Now includes msg.sender (admin)
+        emit DeathReportVerified(pensioner, p.nomineeWallet, msg.sender, block.timestamp);
     }
 
     // Keep your original version too (optional)
@@ -764,7 +948,8 @@ contract PensionRegistry {
         p.deceasedAt = block.timestamp;
         p.deathProofCID = proofCID;
 
-        emit DeathReportVerified(pensioner, p.nomineeWallet, block.timestamp);
+        // ✅ UPDATED: Now includes msg.sender (admin)
+        emit DeathReportVerified(pensioner, p.nomineeWallet, msg.sender, block.timestamp);
     }
 
     function rejectDeathReport(address pensioner, string calldata reason) external onlyAdmin {
@@ -780,7 +965,8 @@ contract PensionRegistry {
         p.deathReviewedAt = block.timestamp;
         p.deathReportRejectReason = reason;
 
-        emit DeathReportRejected(pensioner, p.nomineeWallet, reason, block.timestamp);
+        // ✅ UPDATED: Now includes msg.sender (admin)
+        emit DeathReportRejected(pensioner, p.nomineeWallet, msg.sender, reason, block.timestamp);
     }
 
     /* ===================== REQUIRED FOR DOCUMENTS CONTRACT ===================== */
@@ -911,5 +1097,20 @@ contract PensionRegistry {
 
     function isNominee(address _nominee) external view returns (bool) {
         return nomineeToPensioner[_nominee] != address(0);
+    }
+    function getGPSPensionPercent(uint256 serviceYears)
+    external
+    view
+    returns (uint256)
+    {
+        uint256 best = 0;
+        for (uint256 i = 0; i < gpsServiceYearThresholds.length; i++) {
+            uint256 minY = gpsServiceYearThresholds[i];
+            if (serviceYears >= minY) {
+                uint256 pct = gpsPensionPercentByMinYears[minY];
+                if (pct > best) best = pct;
+            }
+        }
+        return best;
     }
 }

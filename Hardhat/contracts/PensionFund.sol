@@ -23,6 +23,19 @@ contract PensionFund {
     // =========================
     mapping(address => uint256) public gpsAllocatedFund;
 
+    // Aggregate pool accounting. Every wei held by this contract is either
+    // committed to a PRSS saver or allocated to a GPS pensioner; anything above
+    // the sum of the two is genuinely unallocated and is the only balance the
+    // administrator may withdraw.
+    uint256 public totalPRSSPool;
+    uint256 public totalAllocatedGPS;
+
+    function unallocatedBalance() public view returns (uint256) {
+        uint256 committed = totalPRSSPool + totalAllocatedGPS;
+        if (address(this).balance <= committed) return 0;
+        return address(this).balance - committed;
+    }
+
     event ContributionMade(address indexed pensioner, uint256 amount, uint256 timestamp);
     event PensionPaid(address indexed receiver, uint256 amount, uint256 timestamp);
     event PensionDisbursementSet(address indexed disbursement);
@@ -100,6 +113,7 @@ contract PensionFund {
         require(lastPaid == 0 || block.timestamp >= lastPaid + MONTH, "Already paid this month");
 
         totalContributions[msg.sender] += msg.value;
+        totalPRSSPool += msg.value;
         contributionHistory[msg.sender].push(msg.value);
 
         lastContributionAt[msg.sender] = block.timestamp;
@@ -130,6 +144,7 @@ contract PensionFund {
         );
 
         totalContributions[msg.sender] += msg.value;
+        totalPRSSPool += msg.value;
         contributionHistory[msg.sender].push(msg.value);
 
         emit ContributionMade(msg.sender, msg.value, block.timestamp);
@@ -163,6 +178,7 @@ contract PensionFund {
         );
 
         gpsAllocatedFund[pensioner] += msg.value;
+        totalAllocatedGPS += msg.value;
 
         // ✅ UPDATED EMIT: includes admin wallet
         emit GPSFundAllocated(msg.sender, pensioner, msg.value, block.timestamp);
@@ -174,7 +190,8 @@ contract PensionFund {
     function withdrawGPSUnallocated(address payable to, uint256 amount) external onlyAdmin {
         require(to != address(0), "Invalid receiver");
         require(amount > 0, "Invalid amount");
-        require(address(this).balance >= amount, "Contract balance low");
+        // Committed pensioner funds are not withdrawable by the administrator.
+        require(unallocatedBalance() >= amount, "Exceeds unallocated balance");
 
         (bool sent, ) = to.call{value: amount}("");
         require(sent, "ETH transfer failed");
@@ -197,6 +214,7 @@ contract PensionFund {
         require(address(this).balance >= amount, "Contract balance low");
 
         totalContributions[pensioner] -= amount;
+        totalPRSSPool -= amount;
 
         (bool sent, ) = pensioner.call{value: amount}("");
         require(sent, "ETH transfer failed");
@@ -219,6 +237,7 @@ contract PensionFund {
         require(address(this).balance >= amount, "Contract balance low");
 
         gpsAllocatedFund[pensioner] -= amount;
+        totalAllocatedGPS -= amount;
 
         (bool sent, ) = pensioner.call{value: amount}("");
         require(sent, "ETH transfer failed");
@@ -246,6 +265,7 @@ contract PensionFund {
         require(address(this).balance >= amount, "Contract balance low");
 
         totalContributions[pensioner] -= amount;
+        totalPRSSPool -= amount;
 
         (bool sent, ) = receiver.call{value: amount}("");
         require(sent, "ETH transfer failed");
@@ -253,23 +273,10 @@ contract PensionFund {
         emit PensionPaid(receiver, amount, block.timestamp);
     }
 
-    /* ============================================================
-        ⚠️ Generic release function (fallback)
-        - Does NOT deduct from balances
-    ============================================================ */
-    function releaseTo(address payable receiver, uint256 amount)
-        external
-        onlyDisbursement
-    {
-        require(receiver != address(0), "Invalid receiver");
-        require(amount > 0, "Invalid amount");
-        require(address(this).balance >= amount, "Insufficient fund balance");
-
-        (bool sent, ) = receiver.call{value: amount}("");
-        require(sent, "ETH transfer failed");
-
-        emit PensionPaid(receiver, amount, block.timestamp);
-    }
+    // NOTE: a generic releaseTo() fallback previously lived here. It transferred
+    // ETH without decrementing any accounting balance, so wiring it into the
+    // disbursement contract would have permitted draining the pool. It was never
+    // invoked and has been removed.
 
     /* ===================== VIEWS ===================== */
     function getContributionHistory(address pensioner)

@@ -56,6 +56,13 @@ async function main() {
   await disbursement.deployed();
 
   console.log("✅ PensionDisbursement deployed to:", disbursement.address);
+  /* -------------------------------------------------
+   5.1) Link Registry → Disbursement (CRITICAL)
+------------------------------------------------- */
+  console.log("\n🔗 Linking Registry → Disbursement...");
+  const txDisb = await registry.setDisbursementContract(disbursement.address);
+  await txDisb.wait();
+  console.log("✅ Registry linked to Disbursement");
 
   /* -------------------------------------------------
      6) Link Fund → Disbursement

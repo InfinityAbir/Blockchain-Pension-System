@@ -10,6 +10,37 @@ import {
   getProvider,
 } from "./contracts.js";
 
+async function measureTx(label, txPromise) {
+  try {
+    const start = performance.now();
+
+    const tx = await txPromise;
+    const receipt = await tx.wait();
+
+    const end = performance.now();
+
+    const time = (end - start).toFixed(2);
+    const gas = receipt.gasUsed.toString();
+
+    console.log("=================================");
+    console.log("API:", label);
+    console.log("Status: SUCCESS");
+    console.log("Time:", time, "ms");
+    console.log("Gas Used:", gas);
+    console.log("Tx Hash:", receipt.hash);
+    console.log("=================================");
+
+    return receipt;
+  } catch (err) {
+    console.log("=================================");
+    console.log("API:", label);
+    console.log("Status: FAILED");
+    console.error(err);
+    console.log("=================================");
+    throw err;
+  }
+}
+
 let account = requireLogin();
 
 try {
@@ -39,6 +70,8 @@ const accountClosureNotice = document.getElementById("accountClosureNotice");
 const accountClosureNoticeText = document.getElementById(
   "accountClosureNoticeText",
 );
+/* Account Settings Box */
+const accountSettingsBox = document.getElementById("accountSettingsBox");
 
 /* ✅ GPS Gratuity */
 const gpsGratuityBox = document.getElementById("gpsGratuityBox");
@@ -109,7 +142,7 @@ let monthlyContributionWei = 0n;
 let totalContributionWei = 0n; // PRSS balance
 let gpsRemainingWei = 0n; // GPS balance
 let isBusy = false;
-let currentProgram = PROGRAM.PRSS;
+let currentProgram = null;
 
 /* ===================== SCHEME RULE HELPERS (PRSS ONLY) ===================== */
 function schemeMinMonths(code) {
@@ -370,13 +403,25 @@ async function loadHistory() {
     }
 
     const provider = await getProvider();
-    const fund = await getFundContract(true);
+    const fund = await getFundContract(false);
     const disb = await getDisbursementContract(true);
-    const registry = await getRegistryContract(true);
+    const registry = await getRegistryContract(false);
 
-    const program = Number(
-      await safeRead(() => registry.getProgram(account), 1),
-    );
+    let program;
+
+    try {
+      program = Number(await registry.getProgram(account));
+    } catch (err) {
+      console.error("Failed to read program (history):", err);
+      toast("Failed to load program for history", "error");
+      return;
+    }
+
+    if (program !== 0 && program !== 1) {
+      console.error("Invalid program (history):", program);
+      toast("Invalid program data", "error");
+      return;
+    }
     const isGPS = program === PROGRAM.GPS;
 
     const totalPRSS = await safeRead(
@@ -581,9 +626,11 @@ function renderAccountStatusUI(accountStatus) {
   } else if (st === ACCOUNT_STATUS.CLOSURE_REQUESTED) {
     accountClosureNotice.classList.remove("d-none");
     accountClosureNoticeText.innerHTML = `
-      Your account closure request is <b>pending admin review</b>.
+      This account has completed <b>final settlement</b>.
       <br/>
-      Dashboard actions are temporarily locked until admin decision.
+      It is now <b>pending admin closure review</b>.
+      <br/>
+      All pension actions are locked.
     `;
   } else if (st === ACCOUNT_STATUS.CLOSED) {
     accountClosureNotice.classList.remove("d-none");
@@ -598,14 +645,12 @@ function renderAccountStatusUI(accountStatus) {
       "Account status could not be determined.";
   }
 
+  // ✅ Hide closure button unless account is ACTIVE
   if (btnRequestClosure) {
-    btnRequestClosure.disabled = st !== ACCOUNT_STATUS.ACTIVE;
-    btnRequestClosure.title =
-      st === ACCOUNT_STATUS.ACTIVE
-        ? ""
-        : "Closure request already submitted or account closed.";
+    btnRequestClosure.classList.toggle("d-none", st !== ACCOUNT_STATUS.ACTIVE);
   }
 
+  // ✅ Lock all actions when not ACTIVE
   if (st !== ACCOUNT_STATUS.ACTIVE) {
     disableAllActions("Account is not active.");
   }
@@ -616,9 +661,9 @@ async function loadDashboard() {
   try {
     setLoadingSkeleton();
 
-    const fund = await getFundContract(true);
-    const disb = await getDisbursementContract(true);
-    const registry = await getRegistryContract(true);
+    const fund = await getFundContract(false);
+    const disb = await getDisbursementContract(false);
+    const registry = await getRegistryContract(false);
 
     const state = await getUserState(account);
 
@@ -641,10 +686,33 @@ async function loadDashboard() {
     }
 
     /* PROGRAM */
-    currentProgram = Number(
-      await safeRead(() => registry.getProgram(account), 1),
-    );
+    let programRaw;
+
+    try {
+      programRaw = await registry.getProgram(account);
+    } catch (err) {
+      console.error("Failed to read program:", err);
+      toast("Failed to load program from blockchain", "error");
+      return;
+    }
+
+    currentProgram = Number(programRaw);
+
+    // ✅ ADD IT RIGHT HERE
+    if (currentProgram !== 0 && currentProgram !== 1) {
+      console.error("Invalid program value:", currentProgram);
+      toast("Invalid program data", "error");
+      return;
+    }
+
     const isGPS = currentProgram === PROGRAM.GPS;
+    /* ===================== ACCOUNT CLOSURE VISIBILITY ===================== */
+    // Rule:
+    // - PRSS pensioner → can request closure
+    // - GPS pensioner → NO closure option
+    if (accountSettingsBox) {
+      accountSettingsBox.classList.toggle("d-none", isGPS);
+    }
 
     if (programTextEl) {
       programTextEl.textContent = `Program: ${programName(currentProgram)}`;
@@ -719,7 +787,10 @@ async function loadDashboard() {
     }
 
     /* PENSION STATE */
-    const ps = await disb.pensions(account);
+    const ps = await safeRead(() => disb.pensions(account), {
+      started: false,
+      monthlyAmount: 0n,
+    });
 
     pensionStartedEl.textContent = ps.started ? "YES" : "NO";
     monthlyAmountEl.textContent =
@@ -890,12 +961,14 @@ btnPay?.addEventListener("click", async () => {
 
     const fund = await getFundContract(false);
 
-    const tx = await fund.contributeMonthly({
-      value: monthlyContributionWei,
-    });
-
     toast("Confirming transaction…", "info");
-    await tx.wait();
+
+    const receipt = await measureTx(
+      "/api/contribute",
+      fund.contributeMonthly({
+        value: monthlyContributionWei,
+      }),
+    );
 
     toast("Monthly contribution paid ✔", "success");
     await loadDashboard();
@@ -917,9 +990,9 @@ btnStart?.addEventListener("click", async () => {
 
     const disb = await getDisbursementContract(false);
 
-    const tx = await disb.startPension();
     toast("Confirming transaction…", "info");
-    await tx.wait();
+
+    await measureTx("/api/start-pension", disb.startPension());
 
     toast("Pension started ✔", "success");
     await loadDashboard();
@@ -970,9 +1043,9 @@ btnWithdrawFull?.addEventListener("click", async () => {
 
     const disb = await getDisbursementContract(false);
 
-    const tx = await disb.withdrawFullPension();
     toast("Confirming transaction…", "info");
-    await tx.wait();
+
+    await measureTx("/api/withdraw-full", disb.withdrawFullPension());
 
     toast("Full pension withdrawn ✔", "success");
     await loadDashboard();
@@ -994,9 +1067,9 @@ btnWithdraw?.addEventListener("click", async () => {
 
     const disb = await getDisbursementContract(false);
 
-    const tx = await disb.withdrawMonthlyPension();
     toast("Confirming transaction…", "info");
-    await tx.wait();
+
+    await measureTx("/api/withdraw", disb.withdrawMonthlyPension());
 
     toast("Monthly pension withdrawn ✔", "success");
     await loadDashboard();
@@ -1030,9 +1103,9 @@ btnClaimGratuity?.addEventListener("click", async () => {
 
     const disb = await getDisbursementContract(false);
 
-    const tx = await disb.claimGPSGratuity();
     toast("Confirming transaction…", "info");
-    await tx.wait();
+
+    await measureTx("/api/claim-gratuity", disb.claimGPSGratuity());
 
     toast("GPS gratuity claimed ✔", "success");
     await loadDashboard();

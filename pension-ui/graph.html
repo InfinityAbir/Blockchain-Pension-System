@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Transaction Speed Analysis</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 30px;
+        background: #fff;
+      }
+      .chart-wrapper {
+        position: relative;
+        width: 700px;
+        height: 420px;
+      }
+      .x-label {
+        text-align: center;
+        font-size: 14px;
+        color: #444;
+        margin-top: 6px;
+      }
+      .figure-caption {
+        text-align: center;
+        font-size: 14px;
+        font-weight: bold;
+        margin-top: 8px;
+        color: #111;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="chart-wrapper">
+      <canvas id="txChart"></canvas>
+    </div>
+    <p class="x-label">API Endpoints</p>
+    <p class="figure-caption">Figure 4.X Transaction Speed Analysis Diagram</p>
+
+    <script>
+      const displayLabels = [
+        ["Pensioner", "Registration API"],
+        ["Monthly", "Contribution API"],
+        ["Start Pension", "API"],
+        ["Withdraw", "Monthly API"],
+        ["Gratuity", "API"],
+      ];
+
+      const data = [3199, 7010, 6722, 2672, 3122];
+
+      new Chart(document.getElementById("txChart"), {
+        type: "bar",
+        data: {
+          labels: displayLabels,
+          datasets: [
+            {
+              label: "Transaction Speed (ms)",
+              data: data,
+              backgroundColor: "#5b9bd5",
+              borderColor: "#4a8bc4",
+              borderWidth: 0,
+              borderRadius: 2,
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: (ctx) => `${ctx.parsed.y.toLocaleString()} ms`,
+              },
+            },
+          },
+          scales: {
+            x: {
+              grid: { display: false },
+              ticks: {
+                font: { size: 12 },
+                maxRotation: 0,
+                autoSkip: false,
+              },
+            },
+            y: {
+              min: 0,
+              max: 8000,
+              grid: { color: "rgba(0,0,0,0.07)" },
+              ticks: {
+                font: { size: 12 },
+                stepSize: 1000,
+                callback: (v) => v.toLocaleString(),
+              },
+              title: {
+                display: true,
+                text: "Transaction Speed (ms)",
+                font: { size: 13 },
+              },
+            },
+          },
+          layout: { padding: { top: 30 } },
+          animation: {
+            onComplete: function () {
+              const chart = this;
+              const ctx = chart.ctx;
+              const meta = chart.getDatasetMeta(0);
+              ctx.save();
+              ctx.font = "bold 12px Arial";
+              ctx.fillStyle = "#333";
+              ctx.textAlign = "center";
+              ctx.textBaseline = "bottom";
+              meta.data.forEach((bar, i) => {
+                ctx.fillText(data[i].toLocaleString(), bar.x, bar.y - 4);
+              });
+              ctx.restore();
+            },
+          },
+        },
+      });
+    </script>
+  </body>
+</html>

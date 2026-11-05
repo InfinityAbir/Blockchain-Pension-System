@@ -19,11 +19,10 @@ contract PensionDisbursement {
     PensionRegistry public registry;
     IPensionFund public fund;
 
-    uint256 public constant RETIREMENT_AGE = 60;
+
     uint256 public constant MONTH = 30 days;
 
-    // payout duration = 20 years (240 months)
-    uint256 public constant MONTHS_IN_PENSION = 240;
+
 
     // =========================
     // BDT -> WEI conversion
@@ -38,8 +37,7 @@ contract PensionDisbursement {
     enum PensionMode {
         NotChosen,
         Monthly,
-        LumpSum,
-        GratuityTaken // ⚠ kept for backward compatibility (but NOT used anymore for locking)
+        LumpSum
     }
 
     struct PensionState {
@@ -144,38 +142,15 @@ contract PensionDisbursement {
     // =========================
     // PRSS helpers
     // =========================
-    function _schemeMultiplier(PensionRegistry.SchemeType scheme)
-        internal
-        pure
-        returns (uint256)
-    {
-        if (scheme == PensionRegistry.SchemeType.DPS) return 105;
-        if (scheme == PensionRegistry.SchemeType.RetirementFund) return 115;
-        if (scheme == PensionRegistry.SchemeType.ProvidentFund) return 125;
-        if (scheme == PensionRegistry.SchemeType.InsurancePension) return 135;
-        return 100;
-    }
 
     function _schemeMinMonths(PensionRegistry.SchemeType scheme)
-        internal
-        view
-        returns (uint256)
+    internal
+    view
+    returns (uint256)
     {
-        uint256 minMonths = registry.prssMinMonths(scheme);
-        if (minMonths == 0) return 12;
-        return minMonths;
+        return registry.prssMinMonths(scheme);
     }
 
-    // =========================
-    // GPS pension percent bands
-    // =========================
-    function _gpsPensionPct(uint256 years_) internal pure returns (uint256) {
-        if (years_ >= 25) return 80;
-        if (years_ >= 20) return 64;
-        if (years_ >= 15) return 48;
-        if (years_ >= 10) return 32;
-        return 0;
-    }
 
     function _calculateGPSMonthlyWei(address pensioner) internal view returns (uint256) {
         PensionRegistry.Pensioner memory p = registry.getPensioner(pensioner);
@@ -184,7 +159,7 @@ contract PensionDisbursement {
         require(p.gpsVerified, "GPS data not verified");
 
         uint256 years_ = p.verifiedServiceYears;
-        uint256 pct = _gpsPensionPct(years_);
+        uint256 pct = registry.getGPSPensionPercent(years_);
         require(pct > 0, "Insufficient service to qualify for GPS pension");
 
         uint256 pensionBDT = (p.verifiedBasicSalaryBDT * pct) / 100;
@@ -202,7 +177,11 @@ contract PensionDisbursement {
         uint256 years_ = p.verifiedServiceYears;
         require(years_ >= 1, "Service years too low for gratuity");
 
-        uint256 gratuityBDT = p.verifiedBasicSalaryBDT * years_;
+        uint256 multiplier = registry.gpsGratuityMultiplier();
+        require(multiplier > 0, "Gratuity multiplier not set");
+
+        uint256 gratuityBDT =
+            (p.verifiedBasicSalaryBDT * years_ * multiplier) / 100;
         require(gratuityBDT > 0, "Gratuity too small");
 
         return _bdtToWei(gratuityBDT);
@@ -283,7 +262,11 @@ contract PensionDisbursement {
         require(p.wallet == msg.sender, "Not registered");
         require(p.status == PensionRegistry.ApplicationStatus.Approved, "Not approved");
         require(!p.isDeceased, "Pensioner is deceased");
-        require(_getAge(p.dateOfBirth) >= RETIREMENT_AGE, "Not retirement age");
+       require(
+            _getAge(p.dateOfBirth) >= registry.gpsRetirementAge(),
+            "Not retirement age"
+        );
+
         require(!pensions[msg.sender].started, "Pension already started");
 
         // ✅ REALISTIC FIX:
@@ -296,14 +279,20 @@ contract PensionDisbursement {
             uint256 paidMonths = fund.monthlyPaymentsCount(msg.sender);
 
             uint256 minMonths = _schemeMinMonths(p.scheme);
+            require(minMonths > 0, "PRSS min months not configured");
             require(paidMonths >= minMonths, "Minimum monthly payments not completed");
 
             uint256 total = fund.totalContributions(msg.sender);
             require(total > 0, "No contributions");
 
-            uint256 multiplier = _schemeMultiplier(p.scheme);
+            uint256 multiplier = registry.prssSchemeMultiplier(p.scheme);
+            require(multiplier > 0, "PRSS multiplier not set");
 
-            monthlyAmount = (total * multiplier) / 100 / MONTHS_IN_PENSION;
+            uint256 payoutMonths = registry.prssPayoutMonths(p.scheme);
+            require(payoutMonths > 0, "PRSS payout months not set");
+
+            monthlyAmount = (total * multiplier) / 100 / payoutMonths;
+
             require(monthlyAmount > 0, "Pension too small");
         } else if (p.program == PensionRegistry.PensionProgram.GPS) {
             monthlyAmount = _calculateGPSMonthlyWei(msg.sender);
@@ -370,6 +359,12 @@ contract PensionDisbursement {
 
         emit FullPensionWithdrawn(msg.sender, total, block.timestamp);
         emit PensionModeChosen(msg.sender, PensionMode.LumpSum);
+
+        // 🔒 mandatory closure (always last)
+        registry._forceClosureRequest(
+            msg.sender,
+            "Final PRSS settlement completed"
+        );
     }
 
     // =========================
@@ -410,9 +405,14 @@ contract PensionDisbursement {
         lumpSumWithdrawn[pensioner] = true;
 
         fund.releasePRSSLumpSum(pensioner, payable(msg.sender), total);
-
-        emit FullNomineePensionWithdrawn(pensioner, msg.sender, total, block.timestamp);
+      emit FullNomineePensionWithdrawn(pensioner, msg.sender, total, block.timestamp);
         emit PensionModeChosen(pensioner, PensionMode.LumpSum);
+
+        // 🔒 mandatory closure (always last)
+        registry._forceClosureRequest(
+            pensioner,
+            "Final PRSS nominee settlement completed"
+        );
     }
 
     // =========================
@@ -489,7 +489,11 @@ contract PensionDisbursement {
             require(nomineeMonthlyWithdrawCount[pensioner] < maxMonths, "Nominee family pension period ended");
         }
 
+        // Checks-effects-interactions: the entitlement counter must be advanced
+        // BEFORE the external transfer. Incrementing it afterwards left the
+        // relation-based month cap dependent on the lock-period guard alone.
         ps.lastWithdrawal = block.timestamp;
+        nomineeMonthlyWithdrawCount[pensioner] += 1;
 
         if (p.program == PensionRegistry.PensionProgram.PRSS) {
             fund.releaseToPRSSPensioner(payable(msg.sender), ps.monthlyAmount);
@@ -498,8 +502,6 @@ contract PensionDisbursement {
         } else {
             revert("Invalid program");
         }
-
-        nomineeMonthlyWithdrawCount[pensioner] += 1;
 
         emit MonthlyNomineePensionWithdrawn(pensioner, msg.sender, ps.monthlyAmount, block.timestamp);
         emit NomineeFamilyPensionMonthUsed(
@@ -524,7 +526,11 @@ contract PensionDisbursement {
         require(p.gpsVerified, "GPS data not verified");
 
         require(!gpsGratuityClaimed[msg.sender], "Gratuity already claimed");
-        require(_getAge(p.dateOfBirth) >= RETIREMENT_AGE, "Not retirement age");
+        require(
+            _getAge(p.dateOfBirth) >= registry.gpsRetirementAge(),
+            "Not retirement age"
+        );
+
 
         // ✅ REALISTIC FIX:
         // Gratuity should NOT depend on pension mode choice.

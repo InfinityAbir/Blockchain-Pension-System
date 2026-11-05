@@ -2,6 +2,38 @@ import { requireLogin, logout } from "./auth.js";
 import { toast, setLoading } from "./ui.js";
 import { getRegistryContract, getUserState, STATUS } from "./contracts.js";
 
+async function measureTx(label, txPromise) {
+  try {
+    const start = performance.now();
+
+    const tx = await txPromise;
+    const receipt = await tx.wait();
+
+    const end = performance.now();
+
+    const time = (end - start).toFixed(2);
+    const gas = receipt.gasUsed.toString();
+
+    console.log("=================================");
+    console.log("API:", label);
+    console.log("Status: SUCCESS");
+    console.log("Time:", time, "ms");
+    console.log("Gas Used:", gas);
+    console.log("Tx Hash:", receipt.hash);
+    console.log("Block Number:", receipt.blockNumber);
+    console.log("=================================");
+
+    return receipt;
+  } catch (err) {
+    console.log("=================================");
+    console.log("API:", label);
+    console.log("Status: FAILED");
+    console.error(err);
+    console.log("=================================");
+    throw err;
+  }
+}
+
 requireLogin();
 
 // ✅ FIX: register.html doesn't have btnLogout, so don't crash
@@ -407,14 +439,16 @@ const btnRegister = document.getElementById("btnRegister");
 
 btnRegister?.addEventListener("click", async () => {
   try {
-    setLoading(btnRegister, true, "Submitting...");
+    setLoading(btnRegister, true, "Waiting for confirmation...");
 
     const account = requireLogin();
     const state = await getUserState(account);
 
     if (state.status === STATUS.PENDING || state.status === STATUS.APPROVED) {
       toast("You already registered. Redirecting...", "warning");
-      window.location.href = "./upload.html";
+      setTimeout(() => {
+        window.location.href = "./upload.html";
+      }, 5000); // 5 seconds
       return;
     }
 
@@ -523,24 +557,29 @@ btnRegister?.addEventListener("click", async () => {
     }
 
     // ✅ CONTRACT CALL (DOB is now dobYMD)
-    const tx = await registry.registerPensioner(
-      program,
-      scheme,
-      monthlyContributionWei,
-      basicSalaryBDT,
-      serviceYears,
-      employeeId,
-      designation,
-      dobYMD,
-      nomineeWallet,
-      nomineeName,
-      nomineeRelation,
+    toast("Confirming transaction…", "info");
+
+    await measureTx(
+      "/api/register-pensioner",
+      registry.registerPensioner(
+        program,
+        scheme,
+        monthlyContributionWei,
+        basicSalaryBDT,
+        serviceYears,
+        employeeId,
+        designation,
+        dobYMD,
+        nomineeWallet,
+        nomineeName,
+        nomineeRelation,
+      ),
     );
 
-    await tx.wait();
-
     toast("Registration successful ✔", "success");
-    window.location.href = "./upload.html";
+    setTimeout(() => {
+      window.location.href = "./upload.html";
+    }, 5000); // 5 seconds
   } catch (err) {
     console.error(err);
     toast(

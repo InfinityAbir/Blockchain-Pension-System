@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Failure Rate of Smart Contract Functions</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+  </head>
+  <body
+    style="
+      margin: 0;
+      background: #fff;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      font-family: &quot;Times New Roman&quot;, Times, serif;
+    "
+  >
+    <div
+      style="
+        background: #fff;
+        padding: 2rem 2rem 1.5rem;
+        max-width: 760px;
+        width: 100%;
+      "
+    >
+      <h2
+        style="
+          text-align: center;
+          font-size: 16px;
+          font-weight: 700;
+          color: #111;
+          margin: 0 0 1.5rem;
+        "
+      >
+        Failure Rate of Smart Contract Functions
+      </h2>
+
+      <div style="position: relative; width: 100%; height: 400px">
+        <canvas id="failChart"></canvas>
+      </div>
+
+      <p
+        style="
+          text-align: center;
+          font-size: 12px;
+          color: #555;
+          margin-top: 1rem;
+          font-style: italic;
+        "
+      >
+        Figure 4.X &nbsp; Failure Rate of Smart Contract Functions (%)
+      </p>
+    </div>
+
+    <script>
+      const labels = [
+        "registerPensioner()",
+        "contributeMonthly()",
+        "startPension()",
+        "withdrawPension()",
+        "claimGratuity()",
+      ];
+
+      const data = [0, 0, 0, 0, 0];
+
+      new Chart(document.getElementById("failChart"), {
+        type: "bar",
+        data: {
+          labels: labels,
+          datasets: [
+            {
+              label: "Failure Rate (%)",
+              data: data,
+              backgroundColor: "#4472C4",
+              borderColor: "#2F5496",
+              borderWidth: 1,
+              borderRadius: 2,
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: (ctx) => ` Failure Rate: ${ctx.parsed.y}%`,
+              },
+            },
+          },
+          scales: {
+            x: {
+              grid: { display: false },
+              border: { color: "#999" },
+              ticks: {
+                font: { family: "'Times New Roman', Times, serif", size: 12 },
+                color: "#222",
+                maxRotation: 0,
+                autoSkip: false,
+              },
+            },
+            y: {
+              min: 0,
+              max: 100,
+              border: { color: "#999" },
+              grid: { color: "rgba(0,0,0,0.08)" },
+              ticks: {
+                stepSize: 20,
+                font: { family: "'Times New Roman', Times, serif", size: 12 },
+                color: "#222",
+                callback: (v) => v + "%",
+              },
+              title: {
+                display: true,
+                text: "Failure Rate (%)",
+                font: { family: "'Times New Roman', Times, serif", size: 13 },
+                color: "#222",
+              },
+            },
+          },
+          layout: { padding: { top: 30 } },
+          animation: {
+            onComplete: function () {
+              const chart = this;
+              const ctx = chart.ctx;
+              const meta = chart.getDatasetMeta(0);
+              ctx.save();
+              ctx.font = "bold 13px 'Times New Roman', Times, serif";
+              ctx.fillStyle = "#222";
+              ctx.textAlign = "center";
+              ctx.textBaseline = "bottom";
+              meta.data.forEach((bar) => {
+                ctx.fillText("0%", bar.x, bar.y - 5);
+              });
+              ctx.restore();
+            },
+          },
+        },
+      });
+    </script>
+  </body>
+</html>
